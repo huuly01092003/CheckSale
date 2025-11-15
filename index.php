@@ -1,8 +1,5 @@
 <?php
-// BƯỚC 1: THÊM DÒNG NÀY – BẮT BUỘC!
 require_once 'vendor/autoload.php';
-
-// Các require khác
 require_once 'config/config.php';
 require_once 'controllers/UploadController.php';
 require_once 'controllers/ReportController.php';
@@ -17,11 +14,9 @@ switch ($action) {
         $controller->handleUpload();
         break;
     case 'report':
+    default:
         $controller = new ReportController();
         $controller->showReport();
         break;
-    default:
-        header('Location: index.php?action=report');
-        exit;
 }
 ?>
