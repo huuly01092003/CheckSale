@@ -1,0 +1,1 @@
+[16-Nov-2025 01:21:40 Asia/Ho_Chi_Minh] PHP Fatal error:  Allowed memory size of 268435456 bytes exhausted (tried to allocate 16777216 bytes) in C:\xampp\htdocs\doanhso\vendor\phpoffice\phpspreadsheet\src\PhpSpreadsheet\Cell\Cell.php on line 209
