@@ -6,116 +6,18 @@
     <title>Upload File - Kiểm Soát Gian Lận</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/upload.css">
     <style>
-        :root { --primary: #667eea; --secondary: #764ba2; }
-        
         body {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             padding: 20px;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
         .container { max-width: 700px; }
-        
-        .card {
-            border: none;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            border-radius: 12px;
-        }
-        
-        .card-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-            border-radius: 12px 12px 0 0;
-            padding: 25px;
-        }
-        
-        .card-header h4 { margin: 0; font-weight: 700; }
-        
-        .card-body { padding: 30px; }
-        
-        .form-control { 
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-        
-        .form-control:focus { 
-            border-color: var(--primary); 
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .btn { 
-            border-radius: 8px; 
-            font-weight: 600; 
-            padding: 12px; 
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            border: none;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        
-        .alert { 
-            border-radius: 8px; 
-            border: none; 
-        }
-        
-        .upload-info {
-            background: #f0f4ff;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid var(--primary);
-        }
-        
-        .upload-info h6 { 
-            font-weight: 700; 
-            color: var(--primary); 
-            margin-bottom: 15px; 
-        }
-        
-        .upload-info ol { 
-            margin-bottom: 0; 
-            padding-left: 20px; 
-        }
-        
-        .upload-info li { 
-            margin-bottom: 8px; 
-            color: #666; 
-        }
-        
-        .upload-info code {
-            background: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            color: #e74c3c;
-            font-weight: 600;
-        }
-        
-        .performance-info {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border-left: 4px solid #4caf50;
-            font-size: 13px;
-            color: #2e7d32;
-        }
-        
-        .performance-info strong { color: #1b5e20; }
-        
-        .badge { 
-            padding: 6px 12px; 
-            border-radius: 20px; 
-        }
     </style>
 </head>
 <body>
@@ -135,18 +37,29 @@
             <?php endif; ?>
 
             <!-- Upload Form -->
-            <form method="post" enctype="multipart/form-data">
+            <form id="uploadForm" method="post" enctype="multipart/form-data">
                 <div class="mb-4">
                     <label class="form-label fw-bold"><i class="fas fa-file-excel"></i> Chọn File</label>
-                    <input type="file" name="file" accept=".xlsx,.xls,.csv" class="form-control form-control-lg" required>
+                    <input type="file" id="fileInput" name="file" accept=".xlsx,.xls,.csv" 
+                           class="form-control form-control-lg" required>
                     <small class="text-muted d-block mt-2">
                         📁 Định dạng: .xlsx, .xls, .csv | Tối đa: <?= Config::$max_upload_size ?>MB
                     </small>
+                    <div id="filePreview" class="file-preview"></div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary w-100 btn-lg">
+                <button type="submit" id="submitBtn" class="btn btn-primary w-100 btn-lg" disabled>
                     <i class="fas fa-arrow-up"></i> Upload & Import
                 </button>
+
+                <div id="progressBar" class="progress-bar-upload">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 100%">
+                            Đang xử lý...
+                        </div>
+                    </div>
+                </div>
             </form>
 
             <!-- Thứ Tự Import -->
@@ -184,5 +97,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/upload.js"></script>
 </body>
 </html>

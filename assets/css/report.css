@@ -1,0 +1,278 @@
+/* ========== REPORT CSS ========== */
+
+:root {
+    --primary: #667eea;
+    --secondary: #764ba2;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --success: #28a745;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    border-bottom: none;
+    padding: 25px;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 24px;
+}
+
+.card-body {
+    padding: 30px;
+}
+
+.form-control,
+.form-select {
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    padding: 10px 15px;
+    transition: all 0.3s;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control.error,
+.form-select.error {
+    border-color: var(--danger);
+    background-color: #fff5f5;
+}
+
+.error-message {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.error-message::before {
+    content: "⚠️";
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 25px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-success,
+.btn-secondary {
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+    margin-bottom: 20px;
+}
+
+.info-box {
+    background: white;
+    border-left: 5px solid var(--primary);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s;
+}
+
+.info-box:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.info-box small {
+    color: #666;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.info-box h5 {
+    margin: 0;
+    font-weight: 700;
+    font-size: 20px;
+    color: #333;
+}
+
+.table-responsive {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+table {
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+th {
+    font-weight: 700;
+    color: #333;
+    padding: 15px;
+    white-space: nowrap;
+}
+
+td {
+    padding: 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* ← HIGHLIGHT 3 CẤP */
+
+.bg-red-highlight {
+    background: linear-gradient(90deg, #fee 0%, #fdd 100%) !important;
+    border-left: 4px solid var(--danger);
+    font-weight: 500;
+}
+
+.bg-orange-highlight {
+    background: linear-gradient(90deg, #fff5e6 0%, #ffe6cc 100%) !important;
+    border-left: 4px solid #ff9800;
+    font-weight: 500;
+}
+
+.bg-none-highlight {
+    background: white !important;
+    border-left: 4px solid #e0e0e0;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.text-danger {
+    color: var(--danger) !important;
+}
+
+.text-warning {
+    color: #ff9800 !important;
+}
+
+.filter-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+.debug-info {
+    background: #f0f4ff;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #666;
+    margin-top: 20px;
+    border-left: 4px solid var(--primary);
+}
+
+.btn-group-custom {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.legend {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    border: 1px solid #e0e0e0;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border-left: 4px solid;
+    flex-shrink: 0;
+}
+
+.loading-spinner {
+    display: none;
+    text-align: center;
+    padding: 20px;
+}
+
+.loading-spinner.active {
+    display: block;
+}
+
+.spinner-border {
+    color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .card-header h2 {
+        font-size: 18px;
+    }
+
+    table {
+        font-size: 12px;
+    }
+
+    th,
+    td {
+        padding: 10px;
+    }
+
+    .info-box {
+        margin-bottom: 15px;
+    }
+
+    .legend {
+        gap: 15px;
+    }
+
+    .filter-section .row {
+        gap: 10px !important;
+    }
+}

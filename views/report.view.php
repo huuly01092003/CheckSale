@@ -6,228 +6,10 @@
     <title>Báo Cáo Kiểm Soát Gian Lận - Doanh Số Bán Hàng</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #667eea;
-            --secondary: #764ba2;
-            --danger: #dc3545;
-            --warning: #ffc107;
-        }
-        
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            min-height: 100vh;
-            padding: 20px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .container { max-width: 1400px; margin: 0 auto; }
-        
-        .card {
-            border: none;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        
-        .card-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-            border-bottom: none;
-            padding: 25px;
-        }
-        
-        .card-header h2 {
-            margin: 0;
-            font-weight: 700;
-            font-size: 24px;
-        }
-        
-        .card-body { padding: 30px; }
-        
-        .form-control, .form-select {
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            padding: 10px 15px;
-            transition: all 0.3s;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            border: none;
-            border-radius: 8px;
-            padding: 10px 25px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-success, .btn-secondary {
-            border-radius: 8px;
-            font-weight: 600;
-        }
-        
-        .alert {
-            border-radius: 8px;
-            border: none;
-            margin-bottom: 20px;
-        }
-        
-        .info-box {
-            background: white;
-            border-left: 5px solid var(--primary);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s;
-        }
-        
-        .info-box:hover {
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-            transform: translateY(-2px);
-        }
-        
-        .info-box small {
-            color: #666;
-            font-weight: 600;
-            display: block;
-            margin-bottom: 10px;
-        }
-        
-        .info-box h5 {
-            margin: 0;
-            font-weight: 700;
-            font-size: 20px;
-            color: #333;
-        }
-        
-        .table-responsive {
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        table {
-            font-size: 14px;
-            margin-bottom: 0;
-        }
-        
-        thead {
-            background: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-        }
-        
-        th {
-            font-weight: 700;
-            color: #333;
-            padding: 15px;
-            white-space: nowrap;
-        }
-        
-        td {
-            padding: 15px;
-            vertical-align: middle;
-            border-bottom: 1px solid #dee2e6;
-        }
-        
-        /* ← HIGHLIGHT 3 CẤP */
-        
-        /* 1. TÔ ĐỎ - Top nghi vấn */
-        .bg-red-highlight {
-            background: linear-gradient(90deg, #fee 0%, #fdd 100%) !important;
-            border-left: 4px solid #dc3545;
-            font-weight: 500;
-        }
-        
-        /* 2. TÔ CAM - Nghi vấn còn lại */
-        .bg-orange-highlight {
-            background: linear-gradient(90deg, #fff5e6 0%, #ffe6cc 100%) !important;
-            border-left: 4px solid #ff9800;
-            font-weight: 500;
-        }
-        
-        /* 3. KHÔNG TÔ - OK */
-        .bg-none-highlight {
-            background: white !important;
-            border-left: 4px solid #e0e0e0;
-        }
-        
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
-        
-        .text-danger { color: #dc3545 !important; }
-        .text-warning { color: #ff9800 !important; }
-        
-        .filter-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .debug-info {
-            background: #f0f4ff;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 12px;
-            color: #666;
-            margin-top: 20px;
-            border-left: 4px solid var(--primary);
-        }
-        
-        .btn-group-custom {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .legend {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            border-left: 4px solid;
-        }
-        
-        @media (max-width: 768px) {
-            .card-header h2 { font-size: 18px; }
-            table { font-size: 12px; }
-            th, td { padding: 10px; }
-            .info-box { margin-bottom: 15px; }
-            .legend { gap: 15px; }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/report.css">
 </head>
-<body>
+<body style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px;">
 <div class="container">
     <div class="card mt-4 mb-4">
         <div class="card-header">
@@ -244,12 +26,12 @@
             <?php endif; ?>
 
             <!-- Form Filter -->
-            <form method="get" class="filter-section">
+            <form id="filterForm" method="get" class="filter-section">
                 <input type="hidden" name="action" value="report">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-bold"><i class="fas fa-calendar-alt"></i> Tháng</label>
-                        <select name="thang" class="form-select">
+                        <select id="thang" name="thang" class="form-select" required>
                             <?php foreach ($available_months as $m): ?>
                                 <option value="<?= htmlspecialchars($m) ?>" <?= ($m === $thang) ? 'selected' : '' ?>>
                                     Tháng <?= date('m/Y', strtotime($m . '-01')) ?>
@@ -260,12 +42,14 @@
                     
                     <div class="col-md-3">
                         <label class="form-label fw-bold"><i class="fas fa-calendar"></i> Từ Ngày</label>
-                        <input type="date" name="tu_ngay" class="form-control" value="<?= htmlspecialchars($tu_ngay) ?>" required>
+                        <input type="date" id="tuNgay" name="tu_ngay" class="form-control" 
+                               value="<?= htmlspecialchars($tu_ngay) ?>" required>
                     </div>
                     
                     <div class="col-md-3">
                         <label class="form-label fw-bold"><i class="fas fa-calendar"></i> Đến Ngày</label>
-                        <input type="date" name="den_ngay" class="form-control" value="<?= htmlspecialchars($den_ngay) ?>" required>
+                        <input type="date" id="denNgay" name="den_ngay" class="form-control" 
+                               value="<?= htmlspecialchars($den_ngay) ?>" required>
                     </div>
                     
                     <div class="col-md-3">
@@ -328,7 +112,7 @@
                 </div>
                 <div class="legend-item">
                     <div class="legend-color" style="background: linear-gradient(90deg, #fff5e6 0%, #ffe6cc 100%); border-left-color: #ff9800;"></div>
-                    <span><strong>Cam:</strong> Nghi Vấn Gian Lận Còn Lại (<?= $tong_nghi_van - $top_threshold ?> người)</span>
+                    <span><strong>Cam:</strong> Nghi Vấn Gian Lận Còn Lại (<?= max(0, $tong_nghi_van - $top_threshold) ?> người)</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color" style="background: white; border-left-color: #e0e0e0;"></div>
@@ -356,7 +140,6 @@
                     <tbody>
                     <?php if (!empty($report)): ?>
                         <?php foreach ($report as $r): ?>
-                        <!-- ← XÁC ĐỊNH CLASS TÔ MÀU -->
                         <?php
                             if ($r['highlight_type'] === 'red') {
                                 $row_class = 'bg-red-highlight';
@@ -410,6 +193,9 @@
                 <a href="index.php?action=report" class="btn btn-secondary">
                     <i class="fas fa-sync"></i> Làm Mới
                 </a>
+                <button type="button" class="btn btn-info" onclick="exportToCSV()">
+                    <i class="fas fa-download"></i> Xuất CSV
+                </button>
             </div>
 
             <!-- Debug Info -->
@@ -423,5 +209,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/report.js"></script>
 </body>
 </html>
