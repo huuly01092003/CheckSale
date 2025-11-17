@@ -1,7 +1,7 @@
 <?php
 /**
- * FILE: MODELS/ORDERMODEL.PHP (UPDATED)
- * Bổ sung các method KPI vào class OrderModel hiện tại
+ * FILE: MODELS/ORDERMODEL.PHP (UPDATED - FIXED)
+ * 🔧 Sửa lỗi: Loại bỏ các đơn không có ngày tạo (đơn bị trả)
  * 
  * HƯỚNG DẪN: Thay thế toàn bộ file OrderModel.php cũ bằng file này
  */
@@ -17,6 +17,7 @@ class OrderModel {
 
     /**
      * ✅ IMPORT TỪ CSV - SIÊU NHANH
+     * 🔧 FIX: Bỏ qua dòng nếu ngay_tao_don rỗng
      */
     public function importFromCSV($file) {
         try {
@@ -29,6 +30,7 @@ class OrderModel {
             $batchSize = Config::$batch_size;
             $count = 0;
             $errors = 0;
+            $skipped = 0;
             $start_time = microtime(true);
             
             $handle = fopen($file, 'r');
@@ -48,8 +50,17 @@ class OrderModel {
                     
                     if (empty($ma_nv)) continue;
                     
-                    $ngay = $this->parseDate($ngay_val);
-                    if (!$ngay) $ngay = date('Y-m-d');
+                    // 🔧 FIX: Nếu ngay_tao_don rỗng thì để NULL (đơn bị trả)
+                    if (empty($ngay_val)) {
+                        $ngay = null;
+                        $skipped++;
+                    } else {
+                        $ngay = $this->parseDate($ngay_val);
+                        if (!$ngay) {
+                            $ngay = null;
+                            $skipped++;
+                        }
+                    }
                     
                     $tien = $this->parseMoney($tien_val);
                     
@@ -61,7 +72,7 @@ class OrderModel {
                         $batch = [];
                         
                         if ($count % 10000 == 0) {
-                            $this->logger->info("CSV Progress", ['rows' => $count]);
+                            $this->logger->info("CSV Progress", ['rows' => $count, 'skipped' => $skipped]);
                         }
                     }
                 } catch (Exception $e) {
@@ -79,6 +90,7 @@ class OrderModel {
             
             $this->logger->success("CSV Import completed", [
                 'rows' => $count,
+                'skipped' => $skipped,
                 'errors' => $errors,
                 'time_sec' => $elapsed
             ]);
@@ -91,6 +103,7 @@ class OrderModel {
 
     /**
      * ✅ IMPORT TỪ EXCEL (FALLBACK)
+     * 🔧 FIX: Bỏ qua dòng nếu ngay_tao_don rỗng
      */
     public function importFromExcelChunked($file) {
         try {
@@ -108,6 +121,7 @@ class OrderModel {
             
             $count = 0;
             $errors = 0;
+            $skipped = 0;
             $maxRow = $sheet->getHighestRow();
             $startRow = 8;
             $batchSize = Config::$batch_size;
@@ -127,8 +141,17 @@ class OrderModel {
                     
                     if (empty($ma_nv)) continue;
                     
-                    $ngay = $this->parseDate($ngay_val);
-                    if (!$ngay) $ngay = date('Y-m-d');
+                    // 🔧 FIX: Nếu ngay_tao_don rỗng thì để NULL (đơn bị trả)
+                    if (empty($ngay_val)) {
+                        $ngay = null;
+                        $skipped++;
+                    } else {
+                        $ngay = $this->parseDate($ngay_val);
+                        if (!$ngay) {
+                            $ngay = null;
+                            $skipped++;
+                        }
+                    }
                     
                     $tien = $this->parseMoney($tien_val);
                     
@@ -140,7 +163,7 @@ class OrderModel {
                         $batch = [];
                         
                         if ($count % 5000 == 0) {
-                            $this->logger->info("Excel Progress", ['rows' => $count]);
+                            $this->logger->info("Excel Progress", ['rows' => $count, 'skipped' => $skipped]);
                         }
                         
                         if ($count % 10000 == 0) {
@@ -170,6 +193,7 @@ class OrderModel {
             
             $this->logger->success("Excel Import completed", [
                 'rows' => $count,
+                'skipped' => $skipped,
                 'errors' => $errors,
                 'time_sec' => $elapsed
             ]);
@@ -182,6 +206,7 @@ class OrderModel {
 
     /**
      * ✅ CÔNG THỨC 1: Tổng tiền KỲ (Toàn tháng)
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getTotalByMonth($thang) {
         try {
@@ -204,6 +229,7 @@ class OrderModel {
 
     /**
      * ✅ CÔNG THỨC 2: Tổng tiền KHOẢNG (Khoảng ngày chọn)
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getTotalByDateRange($tu_ngay, $den_ngay) {
         try {
@@ -227,6 +253,7 @@ class OrderModel {
 
     /**
      * ✅ CÔNG THỨC 3: Tổng tiền nhân viên TRONG THÁNG
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getEmployeeTotalByMonth($ma_nv, $thang) {
         try {
@@ -250,6 +277,7 @@ class OrderModel {
 
     /**
      * ✅ CÔNG THỨC 4: Tổng tiền nhân viên TRONG KHOẢNG NGÀY
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getEmployeeTotalByDateRange($ma_nv, $tu_ngay, $den_ngay) {
         try {
@@ -274,6 +302,7 @@ class OrderModel {
 
     /**
      * Lấy danh sách tháng có dữ liệu
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getAvailableMonths() {
         try {
@@ -298,6 +327,7 @@ class OrderModel {
 
     /**
      * 🆕 Lấy số đơn hàng theo từng ngày của nhân viên
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getEmployeeDailyOrders($ma_nv, $tu_ngay, $den_ngay, $product_filter = '') {
         try {
@@ -333,6 +363,7 @@ class OrderModel {
 
     /**
      * 🆕 Lấy danh sách sản phẩm (mã)
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getDistinctProducts() {
         try {
@@ -341,6 +372,7 @@ class OrderModel {
                     FROM donhang 
                     WHERE ma_san_pham IS NOT NULL 
                     AND ma_san_pham != ''
+                    AND ngay_tao_don IS NOT NULL
                     ORDER BY product_prefix ASC
                     LIMIT 50";
             
@@ -354,6 +386,7 @@ class OrderModel {
 
     /**
      * 🆕 Lấy chi tiết đơn hàng của nhân viên
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getEmployeeOrderDetails($ma_nv, $tu_ngay, $den_ngay, $product_filter = '') {
         try {
@@ -391,6 +424,7 @@ class OrderModel {
 
     /**
      * 🆕 So sánh hiệu suất: nhân viên vs chung toàn hệ thống
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getSystemComparison($tu_ngay, $den_ngay, $product_filter = '') {
         try {
@@ -428,6 +462,7 @@ class OrderModel {
 
     /**
      * 🆕 Lấy heatmap dữ liệu (ngày nào có hoạt động nhiều nhất)
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
      */
     public function getActivityHeatmap($tu_ngay, $den_ngay, $product_filter = '') {
         try {
@@ -490,21 +525,56 @@ class OrderModel {
     }
 
     private function parseMoney($value) {
-        if (empty($value)) return 0;
+        // ✅ Cho phép 0.00 - không coi là rỗng
+        if ($value === '' || $value === null) return 0;
         
         try {
+            $money = 0;
+            
             if (is_numeric($value)) {
+                // 🔧 Trực tiếp là số
                 $money = floatval($value);
             } else {
-                $money_str = preg_replace('/[^\d.]/', '', trim($value));
+                $value_str = trim($value);
+                
+                // 🔧 Kiểm tra xem có phải chuỗi rỗng sau trim không
+                if ($value_str === '') {
+                    return 0;
+                }
+                
+                // 🔧 FIX: Kiểm tra dấu âm TRƯỚC khi xóa ký tự
+                $is_negative = (strpos($value_str, '-') !== false);
+                
+                // Xóa tất cả ký tự không phải số và dấu chấm, GIỮ lại dấu âm
+                $money_str = preg_replace('/[^\d.-]/', '', $value_str);
+                
+                // 🔧 Nếu sau regex không còn gì (không phải số) → return 0
+                if ($money_str === '' || $money_str === '.' || $money_str === '-') {
+                    return 0;
+                }
+                
+                // Xóa dấu chấm thừa (ngoài dấu chấm thập phân cuối cùng)
+                $parts = explode('.', $money_str);
+                if (count($parts) > 2) {
+                    // Nếu có nhiều dấu chấm, xóa tất cả trừ cái cuối
+                    $money_str = implode('', array_slice($parts, 0, -1)) . '.' . end($parts);
+                }
+                
                 $money = floatval($money_str);
+                
+                // Nếu detect dấu âm nhưng floatval không xử lý đúng
+                if ($is_negative && $money > 0) {
+                    $money = -$money;
+                }
             }
             
-            if ($money >= 0 && $money < 1000000000) {
+            // ✅ Cho phép số âm, 0.00, và dương
+            // Chỉ kiểm tra xem có phải là số hợp lệ không
+            if (is_finite($money)) {
                 return $money;
             }
         } catch (Exception $e) {
-            $this->logger->debug("Money parse error");
+            $this->logger->debug("Money parse error: " . $e->getMessage());
         }
         
         return 0;
@@ -517,6 +587,355 @@ class OrderModel {
             } catch (Exception $e) {
                 $this->logger->debug("Batch insert error");
             }
+        }
+    }
+
+
+    /**
+     * 🆕 Lấy số ngày nhân viên có doanh số (dùng tính doanh số trung bình/ngày)
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getEmployeeDaysWithOrders($ma_nv, $tu_ngay, $den_ngay) {
+        try {
+            $sql = "SELECT COUNT(DISTINCT DATE(ngay_tao_don)) as days_count
+                    FROM donhang 
+                    WHERE ma_nv = ? 
+                    AND DATE(ngay_tao_don) >= ?
+                    AND DATE(ngay_tao_don) <= ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$ma_nv, $tu_ngay, $den_ngay]);
+            $result = $stmt->fetch();
+            
+            return intval($result['days_count'] ?? 0);
+        } catch (Exception $e) {
+            $this->logger->error("getEmployeeDaysWithOrders error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy số nhân viên có doanh số trong khoảng ngày
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getEmployeeCountWithOrders($tu_ngay, $den_ngay) {
+        try {
+            $sql = "SELECT COUNT(DISTINCT ma_nv) as emp_count
+                    FROM donhang 
+                    WHERE DATE(ngay_tao_don) >= ?
+                    AND DATE(ngay_tao_don) <= ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$tu_ngay, $den_ngay]);
+            $result = $stmt->fetch();
+            
+            return intval($result['emp_count'] ?? 0);
+        } catch (Exception $e) {
+            $this->logger->error("getEmployeeCountWithOrders error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy dữ liệu chi tiết nhân viên cho modal
+     * Trả về: doanh số max/min ngày, số ngày hoạt động, v.v.
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getEmployeeDetailForModal($ma_nv, $tu_ngay, $den_ngay) {
+        try {
+            $sql = "SELECT 
+                        COUNT(DISTINCT DATE(ngay_tao_don)) as working_days,
+                        MAX(CAST(thanh_tien as DECIMAL(12,2))) as max_daily_amount,
+                        MIN(CAST(thanh_tien as DECIMAL(12,2))) as min_daily_amount,
+                        AVG(CAST(thanh_tien as DECIMAL(12,2))) as avg_order_value,
+                        COALESCE(SUM(thanh_tien), 0) as total_amount
+                    FROM donhang 
+                    WHERE ma_nv = ? 
+                    AND DATE(ngay_tao_don) >= ?
+                    AND DATE(ngay_tao_don) <= ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000
+                    GROUP BY ma_nv";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$ma_nv, $tu_ngay, $den_ngay]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ?: [
+                'working_days' => 0,
+                'max_daily_amount' => 0,
+                'min_daily_amount' => 0,
+                'avg_order_value' => 0,
+                'total_amount' => 0
+            ];
+        } catch (Exception $e) {
+            $this->logger->error("getEmployeeDetailForModal error");
+            return [];
+        }
+    }
+
+    /**
+     * 🆕 Lấy doanh số max/min ngày của tất cả nhân viên (benchmark)
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getSystemBenchmark($tu_ngay, $den_ngay) {
+        try {
+            $sql = "SELECT 
+                        MAX(daily_max) as system_max_daily,
+                        MIN(daily_min) as system_min_daily,
+                        AVG(daily_avg) as system_avg_daily
+                    FROM (
+                        SELECT 
+                            MAX(CAST(thanh_tien as DECIMAL(12,2))) as daily_max,
+                            MIN(CAST(thanh_tien as DECIMAL(12,2))) as daily_min,
+                            AVG(CAST(thanh_tien as DECIMAL(12,2))) as daily_avg,
+                            DATE(ngay_tao_don) as order_date
+                        FROM donhang 
+                        WHERE DATE(ngay_tao_don) >= ?
+                        AND DATE(ngay_tao_don) <= ?
+                        AND ngay_tao_don IS NOT NULL 
+                        AND YEAR(ngay_tao_don) >= 2000
+                        GROUP BY DATE(ngay_tao_don)
+                    ) daily_stats";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$tu_ngay, $den_ngay]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ?: [
+                'system_max_daily' => 0,
+                'system_min_daily' => 0,
+                'system_avg_daily' => 0
+            ];
+        } catch (Exception $e) {
+            $this->logger->error("getSystemBenchmark error");
+            return [];
+        }
+    }
+
+    /**
+     * 🆕 Lấy doanh số ngày cao nhất của nhân viên trong khoảng
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getMaxDailyAmountByDateRange($ma_nv, $tu_ngay, $den_ngay) {
+        try {
+            $sql = "SELECT MAX(daily_total) as max_daily_amount
+                    FROM (
+                        SELECT 
+                            SUM(CAST(thanh_tien as DECIMAL(12,2))) as daily_total,
+                            DATE(ngay_tao_don) as order_date
+                        FROM donhang 
+                        WHERE ma_nv = ? 
+                        AND DATE(ngay_tao_don) >= ?
+                        AND DATE(ngay_tao_don) <= ?
+                        AND ngay_tao_don IS NOT NULL 
+                        AND YEAR(ngay_tao_don) >= 2000
+                        GROUP BY DATE(ngay_tao_don)
+                    ) daily_stats";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$ma_nv, $tu_ngay, $den_ngay]);
+            $result = $stmt->fetch();
+            
+            return floatval($result['max_daily_amount'] ?? 0);
+        } catch (Exception $e) {
+            $this->logger->error("getMaxDailyAmountByDateRange error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy doanh số ngày cao nhất của nhân viên trong tháng
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getMaxDailyAmountByMonth($ma_nv, $thang) {
+        try {
+            $sql = "SELECT MAX(daily_total) as max_daily_amount
+                    FROM (
+                        SELECT 
+                            SUM(CAST(thanh_tien as DECIMAL(12,2))) as daily_total,
+                            DATE(ngay_tao_don) as order_date
+                        FROM donhang 
+                        WHERE ma_nv = ? 
+                        AND DATE_FORMAT(ngay_tao_don, '%Y-%m') = ?
+                        AND ngay_tao_don IS NOT NULL 
+                        AND YEAR(ngay_tao_don) >= 2000
+                        GROUP BY DATE(ngay_tao_don)
+                    ) daily_stats";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$ma_nv, $thang]);
+            $result = $stmt->fetch();
+            
+            return floatval($result['max_daily_amount'] ?? 0);
+        } catch (Exception $e) {
+            $this->logger->error("getMaxDailyAmountByMonth error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy trung bình doanh số ngày cao nhất của tất cả nhân viên trong khoảng
+     * = (Tổng doanh số ngày cao nhất của từng nhân viên) / (Số nhân viên)
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getSystemMaxDailyAverage($tu_ngay, $den_ngay) {
+        try {
+            $sql = "SELECT AVG(max_daily_amount) as avg_max_daily
+                    FROM (
+                        SELECT 
+                            ma_nv,
+                            MAX(daily_total) as max_daily_amount
+                        FROM (
+                            SELECT 
+                                ma_nv,
+                                SUM(CAST(thanh_tien as DECIMAL(12,2))) as daily_total,
+                                DATE(ngay_tao_don) as order_date
+                            FROM donhang 
+                            WHERE DATE(ngay_tao_don) >= ?
+                            AND DATE(ngay_tao_don) <= ?
+                            AND ngay_tao_don IS NOT NULL 
+                            AND YEAR(ngay_tao_don) >= 2000
+                            GROUP BY ma_nv, DATE(ngay_tao_don)
+                        ) daily_by_emp
+                        GROUP BY ma_nv
+                    ) emp_max_daily";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$tu_ngay, $den_ngay]);
+            $result = $stmt->fetch();
+            
+            return floatval($result['avg_max_daily'] ?? 0);
+        } catch (Exception $e) {
+            $this->logger->error("getSystemMaxDailyAverage error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy trung bình doanh số ngày cao nhất của tất cả nhân viên trong tháng
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getSystemMaxDailyAverageByMonth($thang) {
+        try {
+            $sql = "SELECT AVG(max_daily_amount) as avg_max_daily
+                    FROM (
+                        SELECT 
+                            ma_nv,
+                            MAX(daily_total) as max_daily_amount
+                        FROM (
+                            SELECT 
+                                ma_nv,
+                                SUM(CAST(thanh_tien as DECIMAL(12,2))) as daily_total,
+                                DATE(ngay_tao_don) as order_date
+                            FROM donhang 
+                            WHERE DATE_FORMAT(ngay_tao_don, '%Y-%m') = ?
+                            AND ngay_tao_don IS NOT NULL 
+                            AND YEAR(ngay_tao_don) >= 2000
+                            GROUP BY ma_nv, DATE(ngay_tao_don)
+                        ) daily_by_emp
+                        GROUP BY ma_nv
+                    ) emp_max_daily";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$thang]);
+            $result = $stmt->fetch();
+            
+            return floatval($result['avg_max_daily'] ?? 0);
+        } catch (Exception $e) {
+            $this->logger->error("getSystemMaxDailyAverageByMonth error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy số nhân viên có hoạt động trong khoảng thời gian
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getEmployeeCountInRange($tu_ngay, $den_ngay) {
+        try {
+            $sql = "SELECT COUNT(DISTINCT ma_nv) as emp_count
+                    FROM donhang 
+                    WHERE DATE(ngay_tao_don) >= ?
+                    AND DATE(ngay_tao_don) <= ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$tu_ngay, $den_ngay]);
+            $result = $stmt->fetch();
+            
+            return intval($result['emp_count'] ?? 0);
+        } catch (Exception $e) {
+            $this->logger->error("getEmployeeCountInRange error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy số nhân viên có hoạt động trong tháng
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getEmployeeCountInMonth($thang) {
+        try {
+            $sql = "SELECT COUNT(DISTINCT ma_nv) as emp_count
+                    FROM donhang 
+                    WHERE DATE_FORMAT(ngay_tao_don, '%Y-%m') = ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$thang]);
+            $result = $stmt->fetch();
+            
+            return intval($result['emp_count'] ?? 0);
+        } catch (Exception $e) {
+            $this->logger->error("getEmployeeCountInMonth error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy doanh số trung bình của tất cả nhân viên trong tháng
+     * = Tổng doanh số tháng / Số nhân viên có hoạt động
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getSystemMonthlyAveragePerEmployee($thang) {
+        try {
+            $total = $this->getTotalByMonth($thang);
+            $empCount = $this->getEmployeeCountInMonth($thang);
+            
+            if ($empCount > 0) {
+                return $total / $empCount;
+            }
+            return 0;
+        } catch (Exception $e) {
+            $this->logger->error("getSystemMonthlyAveragePerEmployee error");
+            return 0;
+        }
+    }
+
+    /**
+     * 🆕 Lấy doanh số trung bình của tất cả nhân viên trong khoảng thời gian
+     * = Tổng doanh số khoảng / Số nhân viên có hoạt động
+     * 🔧 FIX: Thêm điều kiện ngay_tao_don IS NOT NULL
+     */
+    public function getSystemRangeAveragePerEmployee($tu_ngay, $den_ngay) {
+        try {
+            $total = $this->getTotalByDateRange($tu_ngay, $den_ngay);
+            $empCount = $this->getEmployeeCountInRange($tu_ngay, $den_ngay);
+            
+            if ($empCount > 0) {
+                return $total / $empCount;
+            }
+            return 0;
+        } catch (Exception $e) {
+            $this->logger->error("getSystemRangeAveragePerEmployee error");
+            return 0;
         }
     }
 }

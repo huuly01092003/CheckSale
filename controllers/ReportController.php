@@ -1,29 +1,11 @@
 <?php
 /**
- * FILE 6: CONTROLLERS/REPORTCONTROLLER.PHP (FINAL)
+ * FILE: CONTROLLERS/REPORTCONTROLLER.PHP (UPDATED v2)
  * 
- * ============================================================================
- * ✅ LOGIC NGHI VẤN GIAN LẬN CHÍNH XÁC
- * ============================================================================
- * 
- * 1️⃣ Tính Kết quả chung = Tổng tiền khoảng / Tổng tiền kỳ
- * 
- * 2️⃣ Tính Tỉ lệ hoàn thành nghi vấn = Kết quả chung × 1.5
- * 
- * 3️⃣ So sánh từng nhân viên:
- *    - Nếu % tiến độ >= Tỉ lệ nghi vấn → NGHI VẤN gian lận
- *    - Nếu % tiến độ < Tỉ lệ nghi vấn → OK, không nghi vấn
- * 
- * 4️⃣ Highlight ĐỘNG trong nhóm nghi vấn:
- *    - ≥20 người → Tô đỏ top 20, còn lại cam
- *    - 15-19 người → Tô đỏ top 15, còn lại cam
- *    - 10-14 người → Tô đỏ top 10, còn lại cam
- *    - 5-9 người → Tô đỏ top 5, còn lại cam
- *    - <5 người → Tô đỏ tất cả
- * 
- * 5️⃣ Nhóm OK: Không tô màu
- * 
- * ============================================================================
+ * Thêm các so sánh:
+ * 1. DS Ngày Cao Nhất (NV) vs TB Ngày Cao Nhất (Chung) - khoảng thời gian
+ * 2. DS Ngày Cao Nhất (NV) vs TB Ngày Cao Nhất (Chung) - tháng
+ * 3. DS Tháng TB/NV vs Chung
  */
 
 class ReportController {
@@ -39,6 +21,7 @@ class ReportController {
         $den_ngay = date('Y-m-d');
         $tong_tien_ky = 0;
         $tong_tien_khoang = 0;
+        $tong_tien_ky_detailed = []; // Chi tiết doanh số toàn tháng
         $debug_info = '';
         $available_months = [];
         $top_threshold = 0;
@@ -95,7 +78,7 @@ class ReportController {
             // ✅ CÔNG THỨC CHÍNH
             // ============================================================================
             
-            // 1️⃣ Tổng tiền kỳ = SUM toàn tháng
+            // 1️⃣ Tổng tiền kỳ = SUM toàn tháng (CHỈ THÁNG ĐƯỢC CHỌN)
             $tong_tien_ky = $orderModel->getTotalByMonth($thang);
             
             // 2️⃣ Tổng tiền khoảng = SUM khoảng ngày chọn
@@ -110,6 +93,18 @@ class ReportController {
             // Số ngày
             $ngay_diff = intval((strtotime($den_ngay) - strtotime($tu_ngay)) / 86400);
             $so_ngay = max(1, $ngay_diff + 1);
+
+            // ========== LẤY BENCHMARK CHO MODAL ==========
+            
+            // Benchmark trong KHOẢNG thời gian
+            $ds_tb_chung_khoang = $orderModel->getSystemRangeAveragePerEmployee($tu_ngay, $den_ngay);
+            $ds_ngay_cao_nhat_tb_khoang = $orderModel->getSystemMaxDailyAverage($tu_ngay, $den_ngay);
+            $so_nhan_vien_khoang = $orderModel->getEmployeeCountInRange($tu_ngay, $den_ngay);
+            
+            // Benchmark trong THÁNG
+            $ds_tb_chung_thang = $orderModel->getSystemMonthlyAveragePerEmployee($thang);
+            $ds_ngay_cao_nhat_tb_thang = $orderModel->getSystemMaxDailyAverageByMonth($thang);
+            $so_nhan_vien_thang = $orderModel->getEmployeeCountInMonth($thang);
 
             // ========== LẤY DANH SÁCH NHÂN VIÊN ==========
             $employeeModel = new EmployeeModel();
@@ -137,10 +132,34 @@ class ReportController {
                 if ($ds_tien_do > 0 || $ds_tim_kiem > 0) {
                     $ty_le = ($ds_tim_kiem > 0) ? ($ds_tien_do / $ds_tim_kiem) : 0;
                     
+                    // Lấy doanh số trung bình nhân viên (cho modal)
+                    $so_ngay_co_doanh_so = $orderModel->getEmployeeDaysWithOrders(
+                        $emp['ma_nv'],
+                        $tu_ngay,
+                        $den_ngay
+                    );
+                    $ds_tb_nhan_vien = ($so_ngay_co_doanh_so > 0) ? ($ds_tien_do / $so_ngay_co_doanh_so) : 0;
+                    
+                    // Lấy doanh số ngày cao nhất của nhân viên
+                    $ds_ngay_cao_nhat_nv_khoang = $orderModel->getMaxDailyAmountByDateRange(
+                        $emp['ma_nv'],
+                        $tu_ngay,
+                        $den_ngay
+                    );
+                    
+                    $ds_ngay_cao_nhat_nv_thang = $orderModel->getMaxDailyAmountByMonth(
+                        $emp['ma_nv'],
+                        $thang
+                    );
+                    
                     $row = array_merge($emp, [
                         'ds_tim_kiem' => $ds_tim_kiem, 
                         'ds_tien_do' => $ds_tien_do, 
-                        'ty_le' => $ty_le
+                        'ty_le' => $ty_le,
+                        'ds_tb_nhan_vien' => $ds_tb_nhan_vien,
+                        'so_ngay_co_doanh_so' => $so_ngay_co_doanh_so,
+                        'ds_ngay_cao_nhat_nv_khoang' => $ds_ngay_cao_nhat_nv_khoang,
+                        'ds_ngay_cao_nhat_nv_thang' => $ds_ngay_cao_nhat_nv_thang
                     ]);
                     
                     // ← SO SÁNH: % tiến độ vs Tỉ lệ nghi vấn
@@ -180,7 +199,6 @@ class ReportController {
             // Thêm rank & flag highlight cho nhóm nghi vấn
             foreach ($report_nghi_van as $key => &$item) {
                 $item['rank'] = $key + 1;
-                // Tô đỏ nếu trong top threshold, còn lại tô cam
                 $item['highlight_type'] = ($item['rank'] <= $top_threshold) ? 'red' : 'orange';
             }
             unset($item);
@@ -195,6 +213,18 @@ class ReportController {
             // ← GỘP LẠI: Nghi vấn đầu, OK sau
             $report = array_merge($report_nghi_van, $report_ok);
             
+            // Chuẩn bị dữ liệu detailed cho modal
+            $tong_tien_ky_detailed = [
+                'tong_tien_ky' => $tong_tien_ky,
+                'ds_tb_chung_khoang' => $ds_tb_chung_khoang,
+                'ds_ngay_cao_nhat_tb_khoang' => $ds_ngay_cao_nhat_tb_khoang,
+                'ds_tb_chung_thang' => $ds_tb_chung_thang,
+                'ds_ngay_cao_nhat_tb_thang' => $ds_ngay_cao_nhat_tb_thang,
+                'so_ngay' => $so_ngay,
+                'so_nhan_vien_khoang' => $so_nhan_vien_khoang,
+                'so_nhan_vien_thang' => $so_nhan_vien_thang
+            ];
+            
             $debug_info = "Tháng: $thang | Đơn hàng: $count_donhang | Nhân viên: $count_nhanvien | Nghi vấn: $tong_nghi_van | Top highlight: $top_threshold";
             
             $logger->info("Report generated", [
@@ -203,7 +233,9 @@ class ReportController {
                 'ket_qua_chung' => number_format($ket_qua_chung * 100, 2) . '%',
                 'ty_le_nghi_van' => number_format($ty_le_nghi_van * 100, 2) . '%',
                 'tong_nghi_van' => $tong_nghi_van,
-                'top_threshold' => $top_threshold
+                'top_threshold' => $top_threshold,
+                'tong_tien_ky' => $tong_tien_ky,
+                'tong_tien_khoang' => $tong_tien_khoang
             ]);
             
             if (empty($report)) {
