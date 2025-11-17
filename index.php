@@ -1,7 +1,7 @@
 <?php
 /**
- * FILE 8: INDEX.PHP
- * Entry point - Routing chính
+ * FILE: INDEX.PHP (UPDATED)
+ * Entry point - Routing chính (bổ sung KPI Report)
  */
 
 // ========== LOAD DEPENDENCIES ==========
@@ -10,6 +10,7 @@ require_once 'config/config.php';
 require_once 'utilities/logger.php';
 require_once 'controllers/UploadController.php';
 require_once 'controllers/ReportController.php';
+require_once 'controllers/KPIReportController.php';
 require_once 'models/EmployeeModel.php';
 require_once 'models/OrderModel.php';
 
@@ -24,6 +25,12 @@ switch ($action) {
         $controller = new UploadController();
         $controller->handleUpload();
         break;
+    
+    case 'kpi_report':
+        $controller = new KPIReportController();
+        $controller->showKPIReport();
+        break;
+    
     case 'report':
     default:
         $controller = new ReportController();

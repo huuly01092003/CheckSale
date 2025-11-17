@@ -1,13 +1,9 @@
 <?php
 /**
- * FILE 4: MODELS/ORDERMODEL.PHP (FIXED)
+ * FILE: MODELS/ORDERMODEL.PHP (UPDATED)
+ * Bổ sung các method KPI vào class OrderModel hiện tại
  * 
- * ✅ BỎ cột loai_don - Lấy dữ liệu dựa vào KHOẢNG NGÀY
- * 
- * CÔNG THỨC:
- * - Tổng tiền kỳ (LAY) = SUM toàn tháng
- * - Tổng tiền khoảng (XEM) = SUM khoảng ngày chọn
- * - Kết quả chung = Tổng tiền khoảng / Tổng tiền kỳ
+ * HƯỚNG DẪN: Thay thế toàn bộ file OrderModel.php cũ bằng file này
  */
 
 class OrderModel {
@@ -21,7 +17,6 @@ class OrderModel {
 
     /**
      * ✅ IMPORT TỪ CSV - SIÊU NHANH
-     * Chỉ import 3 cột: ma_nv, ngay_tao_don, thanh_tien
      */
     public function importFromCSV($file) {
         try {
@@ -47,7 +42,6 @@ class OrderModel {
             
             while (($row = fgetcsv($handle, 0, ',', '"')) !== false) {
                 try {
-                    // Cột D (3) = ma_nv, Cột R (17) = ngay_tao_don, Cột BG (58) = thanh_tien
                     $ma_nv = isset($row[3]) ? trim($row[3]) : '';
                     $ngay_val = isset($row[17]) ? trim($row[17]) : '';
                     $tien_val = isset($row[58]) ? trim($row[58]) : '';
@@ -59,7 +53,6 @@ class OrderModel {
                     
                     $tien = $this->parseMoney($tien_val);
                     
-                    // ← Chỉ insert 3 cột (BỎ loai_don)
                     $batch[] = [$ma_nv, $ngay, $tien];
                     $count++;
                     
@@ -139,7 +132,6 @@ class OrderModel {
                     
                     $tien = $this->parseMoney($tien_val);
                     
-                    // ← Chỉ insert 3 cột (BỎ loai_don)
                     $batch[] = [$ma_nv, $ngay, $tien];
                     $count++;
                     
@@ -190,8 +182,6 @@ class OrderModel {
 
     /**
      * ✅ CÔNG THỨC 1: Tổng tiền KỲ (Toàn tháng)
-     * = SUM(thanh_tien) WHERE thang = thang_chon
-     * Dùng làm MẦU SỐ
      */
     public function getTotalByMonth($thang) {
         try {
@@ -214,8 +204,6 @@ class OrderModel {
 
     /**
      * ✅ CÔNG THỨC 2: Tổng tiền KHOẢNG (Khoảng ngày chọn)
-     * = SUM(thanh_tien) WHERE ngay >= tu_ngay AND ngay <= den_ngay
-     * Dùng làm TỬ SỐ
      */
     public function getTotalByDateRange($tu_ngay, $den_ngay) {
         try {
@@ -239,8 +227,6 @@ class OrderModel {
 
     /**
      * ✅ CÔNG THỨC 3: Tổng tiền nhân viên TRONG THÁNG
-     * = SUM(thanh_tien) WHERE ma_nv = nv AND thang = thang_chon
-     * Dùng làm DS_TIM_KIEM
      */
     public function getEmployeeTotalByMonth($ma_nv, $thang) {
         try {
@@ -264,8 +250,6 @@ class OrderModel {
 
     /**
      * ✅ CÔNG THỨC 4: Tổng tiền nhân viên TRONG KHOẢNG NGÀY
-     * = SUM(thanh_tien) WHERE ma_nv = nv AND ngay >= tu_ngay AND ngay <= den_ngay
-     * Dùng làm DS_TIEN_DO
      */
     public function getEmployeeTotalByDateRange($ma_nv, $tu_ngay, $den_ngay) {
         try {
@@ -304,6 +288,176 @@ class OrderModel {
             return $result ?: [];
         } catch (Exception $e) {
             $this->logger->error("getAvailableMonths error");
+            return [];
+        }
+    }
+
+    /**
+     * ========== KPI METHODS ==========
+     */
+
+    /**
+     * 🆕 Lấy số đơn hàng theo từng ngày của nhân viên
+     */
+    public function getEmployeeDailyOrders($ma_nv, $tu_ngay, $den_ngay, $product_filter = '') {
+        try {
+            $sql = "SELECT 
+                        DATE(ngay_tao_don) as order_date,
+                        COUNT(*) as order_count
+                    FROM donhang 
+                    WHERE ma_nv = ? 
+                    AND DATE(ngay_tao_don) >= ?
+                    AND DATE(ngay_tao_don) <= ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000";
+            
+            $params = [$ma_nv, $tu_ngay, $den_ngay];
+            
+            if (!empty($product_filter)) {
+                $sql .= " AND ma_san_pham LIKE ?";
+                $params[] = $product_filter . '%';
+            }
+            
+            $sql .= " GROUP BY DATE(ngay_tao_don)
+                      ORDER BY DATE(ngay_tao_don) ASC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $this->logger->error("getEmployeeDailyOrders error", ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * 🆕 Lấy danh sách sản phẩm (mã)
+     */
+    public function getDistinctProducts() {
+        try {
+            $sql = "SELECT DISTINCT 
+                        SUBSTRING(ma_san_pham, 1, 2) as product_prefix
+                    FROM donhang 
+                    WHERE ma_san_pham IS NOT NULL 
+                    AND ma_san_pham != ''
+                    ORDER BY product_prefix ASC
+                    LIMIT 50";
+            
+            $result = $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN);
+            return $result ?: [];
+        } catch (Exception $e) {
+            $this->logger->error("getDistinctProducts error");
+            return [];
+        }
+    }
+
+    /**
+     * 🆕 Lấy chi tiết đơn hàng của nhân viên
+     */
+    public function getEmployeeOrderDetails($ma_nv, $tu_ngay, $den_ngay, $product_filter = '') {
+        try {
+            $sql = "SELECT 
+                        ngay_tao_don,
+                        ma_san_pham,
+                        thanh_tien,
+                        COUNT(*) as order_count
+                    FROM donhang 
+                    WHERE ma_nv = ? 
+                    AND DATE(ngay_tao_don) >= ?
+                    AND DATE(ngay_tao_don) <= ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000";
+            
+            $params = [$ma_nv, $tu_ngay, $den_ngay];
+            
+            if (!empty($product_filter)) {
+                $sql .= " AND ma_san_pham LIKE ?";
+                $params[] = $product_filter . '%';
+            }
+            
+            $sql .= " GROUP BY DATE(ngay_tao_don), ma_san_pham
+                      ORDER BY DATE(ngay_tao_don) DESC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $this->logger->error("getEmployeeOrderDetails error");
+            return [];
+        }
+    }
+
+    /**
+     * 🆕 So sánh hiệu suất: nhân viên vs chung toàn hệ thống
+     */
+    public function getSystemComparison($tu_ngay, $den_ngay, $product_filter = '') {
+        try {
+            $sql = "SELECT 
+                        ma_nv,
+                        COUNT(*) as total_orders,
+                        AVG(CAST(thanh_tien as DECIMAL(12,2))) as avg_order_value,
+                        MAX(CAST(thanh_tien as DECIMAL(12,2))) as max_order_value,
+                        MIN(CAST(thanh_tien as DECIMAL(12,2))) as min_order_value
+                    FROM donhang 
+                    WHERE DATE(ngay_tao_don) >= ?
+                    AND DATE(ngay_tao_don) <= ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000";
+            
+            $params = [$tu_ngay, $den_ngay];
+            
+            if (!empty($product_filter)) {
+                $sql .= " AND ma_san_pham LIKE ?";
+                $params[] = $product_filter . '%';
+            }
+            
+            $sql .= " GROUP BY ma_nv
+                      ORDER BY total_orders DESC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $this->logger->error("getSystemComparison error");
+            return [];
+        }
+    }
+
+    /**
+     * 🆕 Lấy heatmap dữ liệu (ngày nào có hoạt động nhiều nhất)
+     */
+    public function getActivityHeatmap($tu_ngay, $den_ngay, $product_filter = '') {
+        try {
+            $sql = "SELECT 
+                        DATE(ngay_tao_don) as order_date,
+                        DAYNAME(ngay_tao_don) as day_name,
+                        COUNT(*) as total_orders,
+                        COUNT(DISTINCT ma_nv) as employee_count
+                    FROM donhang 
+                    WHERE DATE(ngay_tao_don) >= ?
+                    AND DATE(ngay_tao_don) <= ?
+                    AND ngay_tao_don IS NOT NULL 
+                    AND YEAR(ngay_tao_don) >= 2000";
+            
+            $params = [$tu_ngay, $den_ngay];
+            
+            if (!empty($product_filter)) {
+                $sql .= " AND ma_san_pham LIKE ?";
+                $params[] = $product_filter . '%';
+            }
+            
+            $sql .= " GROUP BY DATE(ngay_tao_don)
+                      ORDER BY DATE(ngay_tao_don) ASC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $this->logger->error("getActivityHeatmap error");
             return [];
         }
     }
