@@ -9,6 +9,54 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/report.css">
     <link rel="stylesheet" href="assets/css/kpi.css">
+    <style>
+        .kpi-table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            font-weight: 700;
+            border: none;
+            padding: 15px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .kpi-table tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.2s;
+        }
+        
+        .kpi-table tbody tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .detail-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .detail-metric-label {
+            font-weight: 600;
+            color: #333;
+            flex: 0 0 40%;
+        }
+
+        .detail-metric-value {
+            flex: 0 0 60%;
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .suspicion-detail h6 {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+    </style>
 </head>
 <body style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px;">
 <div class="container">
@@ -125,8 +173,8 @@
             </div>
 
             <!-- Bảng Báo Cáo -->
-            <div class="table-responsive">
-                <table class="table table-hover kpi-table">
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;">
+                <table class="table table-hover kpi-table" style="margin-bottom: 0;">
                     <thead class="table-light">
                         <tr>
                             <th class="text-center" style="width: 60px;">#</th>
@@ -176,6 +224,7 @@
                             </td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-primary" 
+                                        type="button"
                                         data-bs-toggle="modal" 
                                         data-bs-target="#detailModal"
                                         onclick="showReportDetails('<?= htmlspecialchars(json_encode($r)) ?>', '<?= htmlspecialchars(json_encode($tong_tien_ky_detailed)) ?>')">
@@ -216,7 +265,7 @@
 
             <!-- Debug Info -->
             <?php if (!empty($debug_info)): ?>
-            <div class="debug-info">
+            <div class="debug-info" style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 20px;">
                 <strong>📊 Thông Tin:</strong> <?= htmlspecialchars($debug_info) ?>
             </div>
             <?php endif; ?>
@@ -225,22 +274,25 @@
 </div>
 
 <!-- Detail Modal -->
-<div class="modal fade" id="detailModal" tabindex="-1">
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Chi Tiết Nhân Viên - <span id="modalEmpName"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h5 class="modal-title" id="detailModalLabel">Chi Tiết Nhân Viên - <span id="modalEmpName"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div id="modalContent"></div>
+            <div class="modal-body" id="modalContent" style="max-height: 600px; overflow-y: auto;">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="assets/js/report.js"></script>
+
 <script>
 function showReportDetails(jsonData, jsonBenchmark) {
     try {
@@ -249,44 +301,44 @@ function showReportDetails(jsonData, jsonBenchmark) {
         
         document.getElementById('modalEmpName').textContent = data.ten_nv + ' (' + data.ma_nv + ')';
         
-        // === KHOẢNG THỜI GIAN ===
-        const dsAvgEmpKhoang = data.ds_tb_nhan_vien || 0;
-        const dsAvgSystemKhoang = benchmark.ds_tb_chung_khoang || 0;
-        const dsMaxDailyEmpKhoang = data.ds_ngay_cao_nhat_nv_khoang || 0;
-        const dsMaxDailySystemKhoang = benchmark.ds_ngay_cao_nhat_tb_khoang || 0;
+        // ========== KHOẢNG THỜI GIAN ==========
+        const dsTBKhoang_NV = data.ds_tien_do;
+        const dsTBKhoang_Chung = benchmark.ds_tb_chung_khoang;
+        const dsMaxKhoang_NV = data.ds_ngay_cao_nhat_nv_khoang;
+        const dsMaxKhoang_Chung = benchmark.ds_ngay_cao_nhat_tb_khoang;
         
-        // === THÁNG ===
-        const dsTKEmp = data.ds_tim_kiem || 0;
-        const dsTKSystemThang = benchmark.tong_tien_ky || 0;
-        const dsAvgSystemThang = benchmark.ds_tb_chung_thang || 0;
-        const dsMaxDailyEmpThang = data.ds_ngay_cao_nhat_nv_thang || 0;
-        const dsMaxDailySystemThang = benchmark.ds_ngay_cao_nhat_tb_thang || 0;
+        // ========== THÁNG ==========
+        const dsTBThang_NV = data.ds_tong_thang_nv;
+        const dsTBThang_Chung = benchmark.ds_tb_chung_thang;
+        const dsMaxThang_NV = data.ds_ngay_cao_nhat_nv_thang;
+        const dsMaxThang_Chung = benchmark.ds_ngay_cao_nhat_tb_thang;
         
-        // === HELPER: Format currency ===
+        // ========== NGÀY HOẠT ĐỘNG ==========
+        const soNgayKhoang_NV = data.so_ngay_co_doanh_so_khoang || 0;
+        const soNgayThang_NV = data.so_ngay_co_doanh_so_thang || 0;
+        const soNgayTrongKhoang = benchmark.so_ngay || 1;
+        const soNgayTrongThang = benchmark.so_ngay_trong_thang || 1;
+        
         const formatCurrency = (val) => {
-            return isNaN(val) || val === 0 ? '0' : parseFloat(val).toLocaleString('vi-VN', {style: 'currency', currency: 'VND'});
+            if (isNaN(val) || val === 0) return '0 đ';
+            return parseFloat(val).toLocaleString('vi-VN') + ' đ';
         };
         
-        // === HELPER: Tính % chênh lệch ===
         const calcPercent = (emp, system) => {
             if (system === 0 || isNaN(system)) return 0;
             return ((emp - system) / system * 100);
         };
         
-        // === HELPER: So sánh dấu ===
         const getCompareIcon = (emp, system) => {
-            if (emp >= system) return '✅';
-            return '⚠️';
+            return (emp >= system) ? '✅' : '⚠️';
         };
         
-        // === HELPER: Màu sắc ===
         const getCompareColor = (emp, system) => {
-            if (emp >= system) return '#28a745';
-            return '#dc3545';
+            return (emp >= system) ? '#28a745' : '#dc3545';
         };
         
         let html = `
-            <div class="suspicion-detail">
+            <div class="suspicion-detail mb-3">
                 <h6 class="mb-3">
                     <i class="fas fa-user-circle"></i> Thông Tin Nhân Viên
                 </h6>
@@ -310,100 +362,102 @@ function showReportDetails(jsonData, jsonBenchmark) {
 
             <hr>
 
-            <!-- === KHOẢNG THỜI GIAN === -->
-            <div class="suspicion-detail">
+            <div class="suspicion-detail mb-3">
                 <h6 class="mb-3">
                     <i class="fas fa-calendar-days"></i> So Sánh Trong Khoảng Thời Gian
                 </h6>
                 
-                <!-- DS Trung Bình/Ngày -->
                 <div class="detail-metric">
                     <span class="detail-metric-label">📊 DS TB/Ngày (NV):</span>
-                    <span class="detail-metric-value">💰 ${formatCurrency(dsAvgEmpKhoang)}</span>
+                    <span class="detail-metric-value">${formatCurrency(dsTBKhoang_NV)}</span>
                 </div>
                 <div class="detail-metric">
                     <span class="detail-metric-label">📊 DS TB/Ngày (Chung):</span>
-                    <span class="detail-metric-value">💰 ${formatCurrency(dsAvgSystemKhoang)}</span>
+                    <span class="detail-metric-value">${formatCurrency(dsTBKhoang_Chung)}</span>
                 </div>
                 <div class="detail-metric">
                     <span class="detail-metric-label">📊 Chênh Lệch:</span>
-                    <span class="detail-metric-value" style="color: ${getCompareColor(dsAvgEmpKhoang, dsAvgSystemKhoang)};">
-                        ${getCompareIcon(dsAvgEmpKhoang, dsAvgSystemKhoang)} ${Math.abs(calcPercent(dsAvgEmpKhoang, dsAvgSystemKhoang)).toFixed(1)}%
+                    <span class="detail-metric-value" style="color: ${getCompareColor(dsTBKhoang_NV, dsTBKhoang_Chung)};">
+                        ${getCompareIcon(dsTBKhoang_NV, dsTBKhoang_Chung)} ${Math.abs(calcPercent(dsTBKhoang_NV, dsTBKhoang_Chung)).toFixed(1)}%
                     </span>
                 </div>
                 
-                <!-- DS Ngày Cao Nhất -->
-                <div class="detail-metric mt-3">
+                <div class="detail-metric mt-2">
                     <span class="detail-metric-label">🔝 DS Ngày Cao Nhất (NV):</span>
-                    <span class="detail-metric-value">💰 ${formatCurrency(dsMaxDailyEmpKhoang)}</span>
+                    <span class="detail-metric-value">${formatCurrency(dsMaxKhoang_NV)}</span>
                 </div>
                 <div class="detail-metric">
                     <span class="detail-metric-label">🔝 DS Ngày Cao Nhất TB (Chung):</span>
-                    <span class="detail-metric-value">💰 ${formatCurrency(dsMaxDailySystemKhoang)}</span>
+                    <span class="detail-metric-value">${formatCurrency(dsMaxKhoang_Chung)}</span>
                 </div>
                 <div class="detail-metric">
                     <span class="detail-metric-label">🔝 Chênh Lệch:</span>
-                    <span class="detail-metric-value" style="color: ${getCompareColor(dsMaxDailyEmpKhoang, dsMaxDailySystemKhoang)};">
-                        ${getCompareIcon(dsMaxDailyEmpKhoang, dsMaxDailySystemKhoang)} ${Math.abs(calcPercent(dsMaxDailyEmpKhoang, dsMaxDailySystemKhoang)).toFixed(1)}%
+                    <span class="detail-metric-value" style="color: ${getCompareColor(dsMaxKhoang_NV, dsMaxKhoang_Chung)};">
+                        ${getCompareIcon(dsMaxKhoang_NV, dsMaxKhoang_Chung)} ${Math.abs(calcPercent(dsMaxKhoang_NV, dsMaxKhoang_Chung)).toFixed(1)}%
                     </span>
                 </div>
             </div>
 
             <hr>
 
-            <!-- === THÁNG === -->
-            <div class="suspicion-detail">
+            <div class="suspicion-detail mb-3">
                 <h6 class="mb-3">
                     <i class="fas fa-calendar-alt"></i> So Sánh Trong Tháng
                 </h6>
                 
-                <!-- DS Tháng -->
                 <div class="detail-metric">
                     <span class="detail-metric-label">📋 DS Tháng (NV):</span>
-                    <span class="detail-metric-value">💰 ${formatCurrency(dsTKEmp)}</span>
+                    <span class="detail-metric-value">${formatCurrency(dsTBThang_NV)}</span>
                 </div>
                 <div class="detail-metric">
-                    <span class="detail-metric-label">📋 DS Tháng TB/NV (Chung):</span>
-                    <span class="detail-metric-value">💰 ${formatCurrency(dsAvgSystemThang)}</span>
+                    <span class="detail-metric-label">📋 DS TB/Ngày/NV (Chung):</span>
+                    <span class="detail-metric-value">${formatCurrency(dsTBThang_Chung)}</span>
                 </div>
                 <div class="detail-metric">
                     <span class="detail-metric-label">📋 % So Với Chung:</span>
-                    <span class="detail-metric-value" style="color: ${getCompareColor(dsTKEmp, dsAvgSystemThang)};">
-                        ${getCompareIcon(dsTKEmp, dsAvgSystemThang)} ${Math.abs(calcPercent(dsTKEmp, dsAvgSystemThang)).toFixed(1)}%
+                    <span class="detail-metric-value" style="color: ${getCompareColor(dsTBThang_NV, dsTBThang_Chung)};">
+                        ${getCompareIcon(dsTBThang_NV, dsTBThang_Chung)} ${Math.abs(calcPercent(dsTBThang_NV, dsTBThang_Chung)).toFixed(1)}%
                     </span>
                 </div>
                 
-                <!-- DS Ngày Cao Nhất Tháng -->
-                <div class="detail-metric mt-3">
-                    <span class="detail-metric-label">🔝 DS Ngày Cao Nhất TB (Tháng):</span>
-                    <span class="detail-metric-value">💰 ${formatCurrency(dsMaxDailyEmpThang)}</span>
+                <div class="detail-metric mt-2">
+                    <span class="detail-metric-label">🔝 DS Ngày Cao Nhất (NV-Tháng):</span>
+                    <span class="detail-metric-value">${formatCurrency(dsMaxThang_NV)}</span>
                 </div>
                 <div class="detail-metric">
                     <span class="detail-metric-label">🔝 DS Ngày Cao Nhất TB (Chung-Tháng):</span>
-                    <span class="detail-metric-value">💰 ${formatCurrency(dsMaxDailySystemThang)}</span>
+                    <span class="detail-metric-value">${formatCurrency(dsMaxThang_Chung)}</span>
                 </div>
                 <div class="detail-metric">
                     <span class="detail-metric-label">🔝 Chênh Lệch:</span>
-                    <span class="detail-metric-value" style="color: ${getCompareColor(dsMaxDailyEmpThang, dsMaxDailySystemThang)};">
-                        ${getCompareIcon(dsMaxDailyEmpThang, dsMaxDailySystemThang)} ${Math.abs(calcPercent(dsMaxDailyEmpThang, dsMaxDailySystemThang)).toFixed(1)}%
+                    <span class="detail-metric-value" style="color: ${getCompareColor(dsMaxThang_NV, dsMaxThang_Chung)};">
+                        ${getCompareIcon(dsMaxThang_NV, dsMaxThang_Chung)} ${Math.abs(calcPercent(dsMaxThang_NV, dsMaxThang_Chung)).toFixed(1)}%
                     </span>
                 </div>
             </div>
 
             <hr>
 
-            <!-- === NGÀY HOẠT ĐỘNG === -->
             <div class="suspicion-detail">
                 <h6 class="mb-3">
                     <i class="fas fa-calendar-check"></i> Ngày Hoạt Động
                 </h6>
                 <div class="detail-metric">
-                    <span class="detail-metric-label">Số Ngày Có Doanh Số:</span>
-                    <span class="detail-metric-value"><strong>${data.so_ngay_co_doanh_so || 0} ngày</strong></span>
+                    <span class="detail-metric-label">📅 Ngày Có Doanh Số (Khoảng):</span>
+                    <span class="detail-metric-value"><strong>${soNgayKhoang_NV} / ${soNgayTrongKhoang} ngày</strong></span>
                 </div>
                 <div class="detail-metric">
-                    <span class="detail-metric-label">% Ngày Hoạt Động:</span>
-                    <span class="detail-metric-value">${((data.so_ngay_co_doanh_so / benchmark.so_ngay * 100) || 0).toFixed(1)}%</span>
+                    <span class="detail-metric-label">📊 % Hoạt Động (Khoảng):</span>
+                    <span class="detail-metric-value">${(soNgayTrongKhoang > 0 ? (soNgayKhoang_NV / soNgayTrongKhoang * 100) : 0).toFixed(1)}%</span>
+                </div>
+                
+                <div class="detail-metric mt-2">
+                    <span class="detail-metric-label">📅 Ngày Có Doanh Số (Tháng):</span>
+                    <span class="detail-metric-value"><strong>${soNgayThang_NV} / ${soNgayTrongThang} ngày</strong></span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">📊 % Hoạt Động (Tháng):</span>
+                    <span class="detail-metric-value">${(soNgayTrongThang > 0 ? (soNgayThang_NV / soNgayTrongThang * 100) : 0).toFixed(1)}%</span>
                 </div>
             </div>
         `;
@@ -411,17 +465,18 @@ function showReportDetails(jsonData, jsonBenchmark) {
         document.getElementById('modalContent').innerHTML = html;
     } catch (e) {
         console.error('Error parsing data:', e);
-        document.getElementById('modalContent').innerHTML = '<p class="text-danger">Lỗi tải dữ liệu</p>';
+        document.getElementById('modalContent').innerHTML = '<p class="text-danger"><strong>Lỗi tải dữ liệu:</strong> ' + e.message + '</p>';
     }
 }
 
-/**
- * Escape HTML
- */
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function exportToCSV() {
+    alert('Chức năng xuất CSV sẽ được cập nhật');
 }
 </script>
 </body>
