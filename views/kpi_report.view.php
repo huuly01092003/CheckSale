@@ -10,6 +10,29 @@
     <link rel="stylesheet" href="assets/css/report.css">
     <link rel="stylesheet" href="assets/css/kpi.css">
 </head>
+<style>
+    .kpi-table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white !important;
+    font-weight: 700;
+    border: none;
+    padding: 15px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.kpi-table thead.table-light th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    background-color: transparent !important;
+}
+
+.kpi-table thead tr {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+</style>
 <body style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px;">
 <div class="container-fluid">
     <div class="card mt-4 mb-4">
@@ -63,7 +86,7 @@
                             ?>
                                 <option value="<?= htmlspecialchars($prod) ?>" 
                                         <?= ($prod === $filters['product_filter']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($prod) ?>
+                                    <?= htmlspecialchars($prod) ?> - Sản phẩm
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -154,20 +177,20 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="benchmark-item">
-                            <strong>📊 Đơn Cao Nhất (Chung):</strong>
-                            <span class="badge bg-success"><?= $statistics['max_orders_day'] ?> đơn</span>
+                            <strong>📊 TBD Cao Nhất (Chung):</strong>
+                            <span class="badge bg-success"><?= number_format($statistics['max_daily_orders'], 1) ?> đơn</span>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="benchmark-item">
-                            <strong>📊 Đơn Thấp Nhất (Chung):</strong>
-                            <span class="badge bg-info"><?= $statistics['min_orders_day'] ?> đơn</span>
+                            <strong>📊 TBD Chung:</strong>
+                            <span class="badge bg-info"><?= number_format($statistics['avg_daily_orders'], 2) ?> đơn</span>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="benchmark-item">
-                            <strong>🎯 Tiêu Chuẩn So Sánh:</strong>
-                            <span class="badge bg-primary">TBD × 0.5 = Danger | TBD × 0.8 = Warning</span>
+                            <strong>📈 Độ Biến Động (Std Dev):</strong>
+                            <span class="badge bg-warning text-dark"><?= number_format($statistics['std_dev_orders'], 2) ?></span>
                         </div>
                     </div>
                 </div>
@@ -177,15 +200,15 @@
             <div class="kpi-legend">
                 <div class="legend-item">
                     <span class="legend-badge" style="background: #dc3545;"></span>
-                    <strong>Nguy Hiểm (70-100):</strong> Cần kiểm tra ngay
+                    <strong>🚨 Nguy Hiểm (70-100):</strong> Cần kiểm tra ngay
                 </div>
                 <div class="legend-item">
                     <span class="legend-badge" style="background: #ffc107;"></span>
-                    <strong>Cảnh Báo (40-69):</strong> Cần theo dõi
+                    <strong>⚠️ Cảnh Báo (40-69):</strong> Cần theo dõi
                 </div>
                 <div class="legend-item">
                     <span class="legend-badge" style="background: #28a745;"></span>
-                    <strong>Bình Thường (0-39):</strong> Hoạt động bình thường
+                    <strong>✅ Bình Thường (0-39):</strong> Hoạt động bình thường
                 </div>
             </div>
 
@@ -202,9 +225,9 @@
                             <th class="text-end">Max/Ngày</th>
                             <th class="text-end">Min/Ngày</th>
                             <th class="text-center">Xu Hướng</th>
-                            <th class="text-center">Ngày Hoạt Động</th>
-                            <th class="text-end">Điểm Nghi Vấn</th>
-                            <th>Chi Tiết</th>
+                            <th class="text-center">Consistency</th>
+                            <th class="text-end">Điểm KPI</th>
+                            <th class="text-center">Chi Tiết</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -213,27 +236,27 @@
                         <?php
                             $badge_class = 'bg-success';
                             $icon = '✅';
-                            if ($item['suspicion_level'] === 'warning') {
+                            if ($item['kpi_level'] === 'warning') {
                                 $badge_class = 'bg-warning text-dark';
                                 $icon = '⚠️';
-                            } elseif ($item['suspicion_level'] === 'danger') {
+                            } elseif ($item['kpi_level'] === 'danger') {
                                 $badge_class = 'bg-danger';
                                 $icon = '🚨';
                             }
                             
                             $trend_icon = '→';
-                            $trend_text = 'Ổn Định';
+                            $trend_text = 'ổn định';
                             if ($item['trend'] === 'increasing') {
                                 $trend_icon = '📈';
-                                $trend_text = 'Tăng';
+                                $trend_text = 'tăng';
                             } elseif ($item['trend'] === 'decreasing') {
                                 $trend_icon = '📉';
-                                $trend_text = 'Giảm';
+                                $trend_text = 'giảm';
                             }
                         ?>
                         <tr>
                             <td class="text-center">
-                                <span class="badge <?= $badge_class ?>" title="<?= ucfirst($item['suspicion_level']) ?>">
+                                <span class="badge <?= $badge_class ?>" title="<?= ucfirst($item['kpi_level']) ?>">
                                     <?= $icon ?>
                                 </span>
                             </td>
@@ -249,20 +272,20 @@
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-info"><?= $item['working_days'] ?> ngày</span>
+                                <span class="badge bg-info"><?= round($item['consistency_score'], 0) ?>%</span>
                             </td>
                             <td class="text-end">
-                                <span class="kpi-score" style="width: <?= $item['suspicion_score'] ?>%; background: 
-                                    <?= ($item['suspicion_level'] === 'danger') ? '#dc3545' : 
-                                        (($item['suspicion_level'] === 'warning') ? '#ffc107' : '#28a745') ?>;">
-                                    <strong><?= $item['suspicion_score'] ?></strong>
+                                <span style="display: inline-block; padding: 6px 12px; border-radius: 4px; color: white; font-weight: bold; background: 
+                                    <?= ($item['kpi_level'] === 'danger') ? '#dc3545' : 
+                                        (($item['kpi_level'] === 'warning') ? '#ffc107' : '#28a745') ?>;">
+                                    <?= $item['kpi_score'] ?>
                                 </span>
                             </td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-primary" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#detailModal"
-                                        onclick="showDetails('<?= htmlspecialchars(json_encode($item)) ?>')">
+                                        onclick="showKPIDetails('<?= htmlspecialchars(json_encode($item)) ?>')">
                                     <i class="fas fa-eye"></i> Chi Tiết
                                 </button>
                             </td>
@@ -295,15 +318,19 @@
 </div>
 
 <!-- Detail Modal -->
-<div class="modal fade" id="detailModal" tabindex="-1">
+<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Chi Tiết Nghi Vấn - <span id="modalEmpName"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="detailModalLabel">
+                    <i class="fas fa-chart-pie"></i> Chi Tiết KPI - <span id="modalEmpName"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div id="modalContent"></div>
+            <div class="modal-body" id="modalContent" style="max-height: 700px; overflow-y: auto;">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
@@ -312,5 +339,223 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/report.js"></script>
 <script src="assets/js/kpi.js"></script>
+
+<script>
+/**
+ * Hiển thị chi tiết KPI trong modal
+ * FIX: Xử lý đúng Consistency, KPI Score, và các tiêu chí
+ */
+function showKPIDetails(jsonData) {
+    try {
+        const data = JSON.parse(jsonData);
+        const breakdown = data.score_breakdown || {};
+        const reasons = data.kpi_reasons || [];
+        
+        document.getElementById('modalEmpName').textContent = data.ten_nv + ' (' + data.ma_nv + ')';
+        
+        const getTrendIcon = (trend) => {
+            return trend === 'increasing' ? '📈 Tăng' : 
+                   trend === 'decreasing' ? '📉 Giảm' : 
+                   '→ Ổn định';
+        };
+        
+        const getScoreColor = (score) => {
+            if (score >= 70) return '#dc3545';
+            if (score >= 40) return '#ffc107';
+            return '#28a745';
+        };
+        
+        let html = `
+            <!-- KPI Score Overview -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 10px;">ĐIỂM KPI TỔNG HỢP (Mức Độ Nghi Vấn)</div>
+                <div style="font-size: 48px; font-weight: bold; margin: 10px 0;">${data.kpi_score}</div>
+                <div style="font-size: 14px; font-weight: 600;">
+                    ${data.kpi_level === 'danger' ? '🚨 NGUY HIỂM' : 
+                      data.kpi_level === 'warning' ? '⚠️ CẢNH BÁO' : 
+                      '✅ BÌNH THƯỜNG'}
+                </div>
+            </div>
+
+            <!-- Thông Tin Cơ Bản -->
+            <div class="suspicion-detail">
+                <h6><i class="fas fa-user-circle"></i> Thông Tin Nhân Viên</h6>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Mã NV:</span>
+                    <span class="detail-metric-value">${escapeHtml(data.ma_nv)}</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Tên:</span>
+                    <span class="detail-metric-value">${escapeHtml(data.ten_nv)}</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Tỉnh:</span>
+                    <span class="detail-metric-value">${escapeHtml(data.tinh || 'N/A')}</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">GS:</span>
+                    <span class="detail-metric-value">${escapeHtml(data.gs || 'N/A')}</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Ngày Vào Công Ty:</span>
+                    <span class="detail-metric-value">${escapeHtml(data.ngay_vao_cong_ty || 'N/A')}</span>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Breakdown Điểm 5 Tiêu Chí -->
+            <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%); border: 2px solid #667eea; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                <h6 style="color: #667eea; margin-bottom: 15px; font-weight: 700;">
+                    <i class="fas fa-star"></i> Phân Tích 5 Tiêu Chí KPI
+                </h6>
+                
+                <div class="kpi-score-item" style="border-left-color: ${getScoreColor(breakdown.performance)};">
+                    <span class="kpi-score-label">📊 Hiệu Suất Bán Hàng (30%)</span>
+                    <div class="kpi-score-bar">
+                        <div class="kpi-score-bar-bg">
+                            <div class="kpi-score-bar-fill" style="width: ${breakdown.performance}%; background: ${getScoreColor(breakdown.performance)};"></div>
+                        </div>
+                    </div>
+                    <span class="kpi-score-value">${breakdown.performance}</span>
+                </div>
+
+                <div class="kpi-score-item" style="border-left-color: ${getScoreColor(breakdown.consistency)};">
+                    <span class="kpi-score-label">🎯 Tính Nhất Quán (25%) - Consistency: ${data.consistency_score.toFixed(1)}%</span>
+                    <div class="kpi-score-bar">
+                        <div class="kpi-score-bar-bg">
+                            <div class="kpi-score-bar-fill" style="width: ${breakdown.consistency}%; background: ${getScoreColor(breakdown.consistency)};"></div>
+                        </div>
+                    </div>
+                    <span class="kpi-score-value">${breakdown.consistency}</span>
+                </div>
+
+                <div class="kpi-score-item" style="border-left-color: ${getScoreColor(breakdown.trend)};">
+                    <span class="kpi-score-label">📈 Xu Hướng (15%)</span>
+                    <div class="kpi-score-bar">
+                        <div class="kpi-score-bar-bg">
+                            <div class="kpi-score-bar-fill" style="width: ${breakdown.trend}%; background: ${getScoreColor(breakdown.trend)};"></div>
+                        </div>
+                    </div>
+                    <span class="kpi-score-value">${breakdown.trend}</span>
+                </div>
+
+                <div class="kpi-score-item" style="border-left-color: ${getScoreColor(breakdown.volatility)};">
+                    <span class="kpi-score-label">⚡ Độ Biến Động (20%) - Std Dev: ${data.volatility.toFixed(2)}</span>
+                    <div class="kpi-score-bar">
+                        <div class="kpi-score-bar-bg">
+                            <div class="kpi-score-bar-fill" style="width: ${breakdown.volatility}%; background: ${getScoreColor(breakdown.volatility)};"></div>
+                        </div>
+                    </div>
+                    <span class="kpi-score-value">${breakdown.volatility}</span>
+                </div>
+
+                <div class="kpi-score-item" style="border-left-color: ${getScoreColor(breakdown.working_days)};">
+                    <span class="kpi-score-label">⏰ Thời Gian Hoạt Động (10%)</span>
+                    <div class="kpi-score-bar">
+                        <div class="kpi-score-bar-bg">
+                            <div class="kpi-score-bar-fill" style="width: ${breakdown.working_days}%; background: ${getScoreColor(breakdown.working_days)};"></div>
+                        </div>
+                    </div>
+                    <span class="kpi-score-value">${breakdown.working_days}</span>
+                </div>
+            </div>
+
+            <!-- Thống Kê Chi Tiết -->
+            <div class="suspicion-detail">
+                <h6><i class="fas fa-chart-bar"></i> Chỉ Số KPI Chi Tiết</h6>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Tổng Đơn Hàng:</span>
+                    <span class="detail-metric-value">${data.total_orders} đơn</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Tổng Tiền:</span>
+                    <span class="detail-metric-value">${(data.total_amount / 1000000).toFixed(2)}M đ</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">TBD/Ngày:</span>
+                    <span class="detail-metric-value">${data.avg_daily_orders} đơn</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Max/Ngày:</span>
+                    <span class="detail-metric-value">${data.max_day_orders} đơn</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Min/Ngày:</span>
+                    <span class="detail-metric-value">${data.min_day_orders} đơn</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Ngày Hoạt Động:</span>
+                    <span class="detail-metric-value">${data.working_days} ngày</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Xu Hướng:</span>
+                    <span class="detail-metric-value">${getTrendIcon(data.trend)}</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Tính Nhất Quán (Consistency):</span>
+                    <span class="detail-metric-value">${data.consistency_score.toFixed(1)}%</span>
+                </div>
+                <div class="detail-metric">
+                    <span class="detail-metric-label">Độ Biến Động (Std Dev):</span>
+                    <span class="detail-metric-value">${data.volatility.toFixed(2)}</span>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Lý Do Đánh Giá -->
+            <div class="suspicion-detail">
+                <h6><i class="fas fa-clipboard-list"></i> Lý Do Đánh Giá</h6>
+                ${reasons.length > 0 ? reasons.map(r => 
+                    \`<div class="suspicion-reason">✓ \${escapeHtml(r)}</div>\`
+                ).join('') : '<div class="suspicion-reason">✓ Hoạt động bình thường</div>'}
+            </div>
+        `;
+        
+        document.getElementById('modalContent').innerHTML = html;
+    } catch (e) {
+        console.error('Error parsing data:', e);
+        document.getElementById('modalContent').innerHTML = '<p class="text-danger">Lỗi tải dữ liệu</p>';
+    }
+}
+
+/**
+ * Escape HTML
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Export KPI Report to CSV
+ */
+function exportKPIToCSV() {
+    const table = document.querySelector('.kpi-table');
+    if (!table) return;
+
+    let csv = [];
+    table.querySelectorAll('tr').forEach(row => {
+        const cells = [];
+        row.querySelectorAll('th, td').forEach(cell => {
+            const text = cell.textContent.trim()
+                .replace(/\n/g, ' ')
+                .replace(/\s+/g, ' ');
+            cells.push('"' + text.replace(/"/g, '""') + '"');
+        });
+        csv.push(cells.join(','));
+    });
+
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `KPI_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+</script>
 </body>
 </html>

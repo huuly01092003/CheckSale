@@ -602,4 +602,126 @@ class OrderModel {
             }
         }
     }
+
+/**
+ * ADD THESE METHODS TO OrderModel CLASS
+ * Thêm vào cuối class OrderModel, trước dấu }
+ */
+
+/**
+ * Lấy dữ liệu KPI hàng ngày cho nhân viên
+ * Trả về: order_count, total_amount, order_date
+ */
+public function getEmployeeDailyKPI($ma_nv, $tu_ngay, $den_ngay, $product_filter = '') {
+    try {
+        $sql = "SELECT 
+                    DATE(COALESCE(ngay_tao_don, ngay_tao_don_ban)) as order_date,
+                    COUNT(*) as order_count,
+                    COALESCE(SUM(CAST(thanh_tien as DECIMAL(12,2))), 0) as total_amount,
+                    COUNT(DISTINCT ma_khach_hang) as unique_customers,
+                    COUNT(DISTINCT ma_san_pham) as unique_products
+                FROM donhang 
+                WHERE ma_nv = ? 
+                AND ((DATE(ngay_tao_don) >= ? AND DATE(ngay_tao_don) <= ?)
+                    OR (DATE(ngay_tao_don_ban) >= ? AND DATE(ngay_tao_don_ban) <= ?))
+                AND YEAR(COALESCE(ngay_tao_don, ngay_tao_don_ban)) >= 2000";
+        
+        $params = [$ma_nv, $tu_ngay, $den_ngay, $tu_ngay, $den_ngay];
+        
+        if (!empty($product_filter)) {
+            $sql .= " AND ma_san_pham LIKE ?";
+            $params[] = $product_filter . '%';
+        }
+        
+        $sql .= " GROUP BY DATE(COALESCE(ngay_tao_don, ngay_tao_don_ban))
+                  ORDER BY order_date ASC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $this->logger->error("getEmployeeDailyKPI error", ['error' => $e->getMessage()]);
+        return [];
+    }
+}
+
+/**
+ * Lấy dữ liệu KPI hàng ngày cho toàn hệ thống
+ * Dùng để tính benchmark
+ */
+public function getSystemDailyKPI($tu_ngay, $den_ngay, $product_filter = '') {
+    try {
+        $sql = "SELECT 
+                    DATE(COALESCE(ngay_tao_don, ngay_tao_don_ban)) as order_date,
+                    COUNT(*) as total_orders,
+                    COALESCE(SUM(CAST(thanh_tien as DECIMAL(12,2))), 0) as total_amount,
+                    COUNT(DISTINCT ma_nv) as emp_count,
+                    COUNT(DISTINCT ma_khach_hang) as customer_count
+                FROM donhang 
+                WHERE ((DATE(ngay_tao_don) >= ? AND DATE(ngay_tao_don) <= ?)
+                    OR (DATE(ngay_tao_don_ban) >= ? AND DATE(ngay_tao_don_ban) <= ?))
+                AND YEAR(COALESCE(ngay_tao_don, ngay_tao_don_ban)) >= 2000";
+        
+        $params = [$tu_ngay, $den_ngay, $tu_ngay, $den_ngay];
+        
+        if (!empty($product_filter)) {
+            $sql .= " AND ma_san_pham LIKE ?";
+            $params[] = $product_filter . '%';
+        }
+        
+        $sql .= " GROUP BY DATE(COALESCE(ngay_tao_don, ngay_tao_don_ban))
+                  ORDER BY order_date ASC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $this->logger->error("getSystemDailyKPI error", ['error' => $e->getMessage()]);
+        return [];
+    }
+}
+
+/**
+ * Lấy thống kê chi tiết nhân viên theo tháng
+ */
+public function getEmployeeKPIStats($ma_nv, $thang) {
+    try {
+        $sql = "SELECT 
+                    ma_nv,
+                    COUNT(*) as total_orders,
+                    COUNT(DISTINCT DATE(COALESCE(ngay_tao_don, ngay_tao_don_ban))) as working_days,
+                    COALESCE(SUM(CAST(thanh_tien as DECIMAL(12,2))), 0) as total_amount,
+                    COALESCE(AVG(CAST(thanh_tien as DECIMAL(12,2))), 0) as avg_amount,
+                    COUNT(DISTINCT ma_khach_hang) as customer_count,
+                    COUNT(DISTINCT ma_san_pham) as product_count,
+                    COALESCE(MAX(CAST(thanh_tien as DECIMAL(12,2))), 0) as max_transaction,
+                    COALESCE(MIN(CAST(thanh_tien as DECIMAL(12,2))), 0) as min_transaction
+                FROM donhang 
+                WHERE ma_nv = ? 
+                AND (DATE_FORMAT(ngay_tao_don, '%Y-%m') = ? OR DATE_FORMAT(ngay_tao_don_ban, '%Y-%m') = ?)
+                AND YEAR(COALESCE(ngay_tao_don, ngay_tao_don_ban)) >= 2000
+                GROUP BY ma_nv";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$ma_nv, $thang, $thang]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    } catch (Exception $e) {
+        $this->logger->error("getEmployeeKPIStats error", ['error' => $e->getMessage()]);
+        return [];
+    }
+}
+    public function getAvailableProducts() {
+    try {
+        $sql = "SELECT DISTINCT SUBSTRING(ma_san_pham, 1, 2) as product_prefix
+                FROM donhang 
+                WHERE ma_san_pham IS NOT NULL 
+                AND ma_san_pham != ''
+                ORDER BY product_prefix ASC";
+        
+        return $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    } catch (Exception $e) {
+        $this->logger->error("getAvailableProducts error", ['error' => $e->getMessage()]);
+        return [];
+    }
+}
 }
