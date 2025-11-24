@@ -7,7 +7,7 @@
 class Config {
     // ========== CẤU HÌNH DATABASE ==========
     private static $host = 'localhost';
-    private static $dbname = 'hoalinhchecksale';
+    private static $dbname = 'databanhang';
     private static $user = 'root';
     private static $pass = '';
     private static $charset = 'utf8mb4';

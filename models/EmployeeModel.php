@@ -1,7 +1,6 @@
 <?php
 /**
- * FILE 5: MODELS/EMPLOYEEMODEL.PHP
- * Model xử lý nhân viên - Import & Query
+ * FILE: MODELS/EMPLOYEEMODEL.PHP (COMPLETE v4)
  */
 
 class EmployeeModel {
@@ -13,9 +12,7 @@ class EmployeeModel {
         $this->logger = new Logger();
     }
 
-    /**
-     * Import từ CSV
-     */
+    // ========== IMPORT FROM CSV ==========
     public function importFromCSV($file) {
         try {
             $stmt = $this->pdo->prepare(
@@ -33,16 +30,12 @@ class EmployeeModel {
                 throw new Exception("Không thể mở file CSV");
             }
             
-            // Bỏ header
             fgetcsv($handle, 0, ',', '"');
             
             $this->logger->info("Employee CSV Import started", ['file' => basename($file)]);
             
             while (($row = fgetcsv($handle, 0, ',', '"')) !== false) {
                 try {
-                    // ← CẬP NHẬT CỘT THEO FILE CỦA BẠN
-                    // Image 1: Cột B(1)=tinh, D(3)=gs, G(6)=ma_nv, H(7)=ten_nv, J(9)=ngay_vao_cong_ty
-                    
                     $tinh = isset($row[1]) ? trim($row[1]) : '';
                     $gs = isset($row[3]) ? trim($row[3]) : '';
                     $ma_nv = isset($row[6]) ? trim($row[6]) : '';
@@ -95,9 +88,7 @@ class EmployeeModel {
         }
     }
 
-    /**
-     * Import từ Excel
-     */
+    // ========== IMPORT FROM EXCEL ==========
     public function importFromExcelChunked($file) {
         try {
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file);
@@ -169,9 +160,7 @@ class EmployeeModel {
         }
     }
 
-    /**
-     * Lấy tất cả nhân viên
-     */
+    // ========== GET ALL EMPLOYEES ==========
     public function getAll() {
         try {
             $sql = "SELECT * FROM nhanvien ORDER BY ma_nv ASC";
@@ -182,9 +171,7 @@ class EmployeeModel {
         }
     }
 
-    /**
-     * Lấy nhân viên theo mã
-     */
+    // ========== GET EMPLOYEE BY CODE ==========
     public function getByCode($ma_nv) {
         try {
             $sql = "SELECT * FROM nhanvien WHERE ma_nv = ?";
@@ -197,9 +184,59 @@ class EmployeeModel {
         }
     }
 
-    /**
-     * Tổng số nhân viên
-     */
+    // ========== GET EMPLOYEES BY GS ==========
+    public function getByGS($gs) {
+        try {
+            $sql = "SELECT * FROM nhanvien WHERE gs = ? ORDER BY ma_nv ASC";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$gs]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $this->logger->error("getByGS error");
+            return [];
+        }
+    }
+
+    // ========== GET AVAILABLE GS (GIÁM SÁT) ==========
+    public function getAvailableGS() {
+        try {
+            $sql = "SELECT DISTINCT gs FROM nhanvien WHERE gs IS NOT NULL AND gs != '' ORDER BY gs ASC";
+            return $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (Exception $e) {
+            $this->logger->error("getAvailableGS error");
+            return [];
+        }
+    }
+
+    // ========== GET AVAILABLE PROVINCES ==========
+    public function getAvailableProvinces() {
+        try {
+            $sql = "SELECT DISTINCT tinh FROM nhanvien WHERE tinh IS NOT NULL AND tinh != '' ORDER BY tinh ASC";
+            return $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (Exception $e) {
+            $this->logger->error("getAvailableProvinces error");
+            return [];
+        }
+    }
+
+    // ========== GET STATISTICS BY GS ==========
+    public function getStatisticsByGS() {
+        try {
+            $sql = "SELECT gs, COUNT(*) as total, 
+                           MIN(ngay_vao_cong_ty) as oldest_date,
+                           MAX(ngay_vao_cong_ty) as newest_date
+                    FROM nhanvien 
+                    WHERE gs IS NOT NULL AND gs != ''
+                    GROUP BY gs 
+                    ORDER BY gs ASC";
+            return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            $this->logger->error("getStatisticsByGS error");
+            return [];
+        }
+    }
+
+    // ========== GET TOTAL COUNT ==========
     public function getTotalCount() {
         try {
             return $this->pdo->query("SELECT COUNT(*) FROM nhanvien")->fetchColumn();
@@ -209,10 +246,23 @@ class EmployeeModel {
         }
     }
 
-    /**
-     * === HELPER FUNCTIONS ===
-     */
+    // ========== SEARCH EMPLOYEES ==========
+    public function search($keyword) {
+        try {
+            $keyword = '%' . $keyword . '%';
+            $sql = "SELECT * FROM nhanvien 
+                    WHERE ma_nv LIKE ? OR ten_nv LIKE ? OR tinh LIKE ? OR gs LIKE ?
+                    ORDER BY ma_nv ASC";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$keyword, $keyword, $keyword, $keyword]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $this->logger->error("search error");
+            return [];
+        }
+    }
 
+    // ========== HELPER: Parse Date ==========
     private function parseDate($value) {
         if (empty($value)) return null;
         

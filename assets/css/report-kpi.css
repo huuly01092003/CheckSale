@@ -1,0 +1,381 @@
+/* ========== KPI CSS - IMPROVED v2 (FIX CSS NOT LOADING) ========== */
+
+:root {
+    --primary: #667eea;
+    --secondary: #764ba2;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --success: #28a745;
+    --info: #17a2b8;
+    --critical: #ff6b6b;
+}
+
+/* ========== KPI CARD ========== */
+.kpi-card {
+    background: white !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.3s ease !important;
+    border-left: 5px solid #ddd !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 15px !important;
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.kpi-card-primary {
+    border-left-color: var(--primary) !important;
+}
+
+.kpi-card-success {
+    border-left-color: var(--success) !important;
+}
+
+.kpi-card-warning {
+    border-left-color: var(--warning) !important;
+}
+
+.kpi-card-danger {
+    border-left-color: var(--danger) !important;
+}
+
+.kpi-card-info {
+    border-left-color: var(--info) !important;
+}
+
+.kpi-card-light {
+    border-left-color: #e0e0e0 !important;
+}
+
+.kpi-icon {
+    font-size: 32px !important;
+    margin-bottom: 0 !important;
+    min-width: 40px !important;
+    text-align: center !important;
+}
+
+.kpi-content {
+    flex: 1 !important;
+}
+
+.kpi-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #999 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 5px !important;
+    display: block !important;
+}
+
+.kpi-value {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: #333 !important;
+    margin: 3px 0 !important;
+    display: block !important;
+}
+
+.kpi-subtext {
+    font-size: 12px !important;
+    color: #666 !important;
+    display: block !important;
+}
+
+/* ========== KPI SCORE BAR ========== */
+.kpi-score-item {
+    margin-bottom: 15px !important;
+    padding: 12px !important;
+    background: #f9f9f9 !important;
+    border-radius: 8px !important;
+    border-left: 4px solid #ddd !important;
+}
+
+.kpi-score-label {
+    display: block !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    margin-bottom: 8px !important;
+    color: #333 !important;
+}
+
+.kpi-score-bar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-bottom: 5px !important;
+}
+
+.kpi-score-bar-bg {
+    flex: 1 !important;
+    height: 24px !important;
+    background: #e0e0e0 !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+}
+
+.kpi-score-bar-fill {
+    height: 100% !important;
+    border-radius: 12px !important;
+    transition: width 0.4s ease !important;
+    min-width: 2px !important;
+}
+
+.kpi-score-value {
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    color: #333 !important;
+    min-width: 40px !important;
+    text-align: right !important;
+}
+
+/* ========== KPI TABLE ========== */
+.kpi-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+}
+
+.kpi-table thead {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+    color: white !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+}
+
+.kpi-table thead th {
+    padding: 16px 12px !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    border: none !important;
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    color: white !important;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+}
+
+.kpi-table tbody tr {
+    border-bottom: 1px solid #e0e0e0 !important;
+    transition: all 0.2s ease !important;
+}
+
+.kpi-table tbody tr:hover {
+    background: rgba(102, 126, 234, 0.05) !important;
+}
+
+.kpi-table tbody td {
+    padding: 12px !important;
+    font-size: 13px !important;
+    vertical-align: middle !important;
+}
+
+.kpi-table .text-end {
+    text-align: right !important;
+}
+
+.kpi-table .text-center {
+    text-align: center !important;
+}
+
+/* ========== KPI LEGEND ========== */
+.kpi-legend {
+    background: white !important;
+    border: 2px solid #f0f0f0 !important;
+    border-radius: 8px !important;
+    padding: 15px 20px !important;
+    margin-bottom: 20px !important;
+    display: flex !important;
+    gap: 30px !important;
+    flex-wrap: wrap !important;
+}
+
+.legend-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    font-size: 13px !important;
+}
+
+.legend-badge {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+}
+
+/* ========== BENCHMARK BOX ========== */
+.benchmark-box {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%) !important;
+    border: 2px solid #667eea !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    margin-bottom: 20px !important;
+}
+
+.benchmark-item {
+    font-size: 13px !important;
+    margin: 10px 0 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+}
+
+.benchmark-item strong {
+    color: #333 !important;
+    flex: 1 !important;
+}
+
+.benchmark-item .badge {
+    margin-left: 10px !important;
+}
+
+/* ========== SUSPENSION DETAIL ========== */
+.suspicion-detail {
+    background: #f9f9f9 !important;
+    padding: 15px !important;
+    border-radius: 8px !important;
+    margin-bottom: 15px !important;
+}
+
+.suspicion-detail h6 {
+    color: var(--primary) !important;
+    border-bottom: 2px solid var(--primary) !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 15px !important;
+    font-weight: 700 !important;
+}
+
+.detail-metric {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    padding: 8px 0 !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    font-size: 13px !important;
+    flex-wrap: wrap !important;
+}
+
+.detail-metric:last-child {
+    border-bottom: none !important;
+}
+
+.detail-metric-label {
+    font-weight: 600 !important;
+    color: #333 !important;
+    flex: 0 0 45% !important;
+}
+
+.detail-metric-value {
+    flex: 0 0 55% !important;
+    text-align: right !important;
+    font-weight: 500 !important;
+    color: #666 !important;
+}
+
+.suspicion-reason {
+    padding: 8px 12px !important;
+    background: white !important;
+    border-radius: 6px !important;
+    margin-bottom: 8px !important;
+    border-left: 3px solid var(--success) !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+}
+
+/* ========== MODAL STYLES ========== */
+.modal-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.modal-body {
+    background: #fafafa !important;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1200px) {
+    .kpi-legend {
+        flex-direction: column !important;
+        gap: 15px !important;
+    }
+
+    .legend-item {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 992px) {
+    .kpi-card {
+        flex-direction: column !important;
+        text-align: center !important;
+    }
+
+    .kpi-icon {
+        width: 100% !important;
+        text-align: center !important;
+        font-size: 28px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .kpi-card {
+        padding: 15px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .kpi-value {
+        font-size: 20px !important;
+    }
+
+    .kpi-label {
+        font-size: 10px !important;
+    }
+
+    .kpi-table thead th {
+        padding: 10px 6px !important;
+        font-size: 11px !important;
+    }
+
+    .kpi-table tbody td {
+        padding: 8px !important;
+        font-size: 11px !important;
+    }
+
+    .detail-metric {
+        flex-direction: column !important;
+        gap: 5px !important;
+    }
+
+    .detail-metric-label,
+    .detail-metric-value {
+        flex: 0 0 100% !important;
+        text-align: left !important;
+    }
+
+    .benchmark-box {
+        padding: 15px !important;
+    }
+
+    .benchmark-item {
+        flex-direction: column !important;
+        gap: 5px !important;
+        align-items: flex-start !important;
+    }
+
+    .benchmark-item .badge {
+        margin-left: 0 !important;
+    }
+
+    .kpi-legend {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+}
