@@ -1,7 +1,8 @@
 <?php
 /**
- * FILE: CONTROLLERS/GIAMSATCONTROLLER.PHP
- * Quản lý dữ liệu giám sát ghé thăm (MVC Pattern)
+ * FILE: CONTROLLERS/GIAMSATCONTROLLER.PHP (WITH PAGINATION)
+ * ✅ Fix: Pagination để load hết 91k+ records
+ * ✅ Fix: Time format hiển thị đúng
  */
 
 class GiamSatController {
@@ -14,7 +15,7 @@ class GiamSatController {
     }
 
     /**
-     * Hiển thị trang giám sát chính
+     * Hiển thị trang giám sát chính (với pagination)
      */
     public function showGiamSat() {
         $message = '';
@@ -23,6 +24,13 @@ class GiamSatController {
         $statistics = [];
         $filters = [];
         $chart_data = [];
+        
+        // ✅ PAGINATION
+        $page = !empty($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+        $per_page = 500;  // Load 500 records/page
+        $offset = ($page - 1) * $per_page;
+        $total_pages = 0;
+        $total_records = 0;
 
         try {
             // ========== LẤY KHOẢNG NGÀY ==========
@@ -48,23 +56,35 @@ class GiamSatController {
                 'tinh_thanh' => $tinh_thanh
             ];
 
-            // ========== LẤY DỮ LIỆU TỬ MODEL ==========
-            $giamsat_data = $this->giamsatModel->search($filters, 1000);
+            // ========== LẤY DỮ LIỆU VỚI PAGINATION ==========
+            $giamsat_data = $this->giamsatModel->searchPaginated($filters, $offset, $per_page);
+            
+            // ========== TÍNH TOÁN PAGINATION ==========
+            $total_records = $this->giamsatModel->countFiltered($filters);
+            $total_pages = ceil($total_records / $per_page);
 
             // ========== TÍNH TOÁN THỐNG KÊ ==========
             $statistics = $this->giamsatModel->getStatistics($tu_ngay, $den_ngay);
             $statistics['by_result'] = $this->giamsatModel->getResultStats($tu_ngay, $den_ngay);
             
-            // Thêm thông tin chi tiết
-            $statistics['total_records'] = count($giamsat_data);
+            // ✅ TỔNG RECORDS từ DATABASE (không phải count($giamsat_data))
+            $statistics['total_records'] = $total_records;
 
             // ========== LẤY DỮ LIỆU CHO BIỂU ĐỒ ==========
             $chart_data = $this->giamsatModel->getChartData($tu_ngay, $den_ngay);
 
-            if (empty($giamsat_data)) {
+            if (empty($giamsat_data) && $page == 1) {
                 $message = "⚠️ Không có dữ liệu giám sát cho khoảng thời gian này.";
                 $type = 'warning';
             }
+
+            $this->logger->info("GiamSat displayed", [
+                'page' => $page,
+                'per_page' => $per_page,
+                'records_this_page' => count($giamsat_data),
+                'total_records' => $total_records,
+                'total_pages' => $total_pages
+            ]);
 
         } catch (Exception $e) {
             $message = "❌ Lỗi: " . $e->getMessage();
@@ -98,7 +118,7 @@ class GiamSatController {
                 $type = 'danger';
             } else {
                 try {
-                    $imported = $this->importFromCSV($file);
+                    $imported = $this->giamsatModel->importFromCSV($file);
                     $message = "✅ Import thành công: $imported dòng dữ liệu đã thêm vào hệ thống";
                     $type = 'success';
                     $this->logger->success("GiamSat import success", ['rows' => $imported]);
@@ -111,122 +131,5 @@ class GiamSatController {
         }
 
         include 'views/giamsat_upload.view.php';
-    }
-
-    /**
-     * Import dữ liệu từ CSV
-     */
-    private function importFromCSV($file) {
-        ini_set('memory_limit', '-1');
-        set_time_limit(0);
-
-        $handle = fopen($file, 'r');
-        if (!$handle) throw new Exception("Không mở được file CSV");
-
-        $batch = [];
-        $total = 0;
-        $batchSize = 500;
-        $inserted = 0;
-
-        // Bỏ qua header
-        $header = fgetcsv($handle, 0, ',', '"');
-
-        while (($row = fgetcsv($handle, 0, ',', '"')) !== false) {
-            if (empty($row) || count($row) < 10) continue;
-
-            try {
-                // Parse dữ liệu - Index tính từ 0
-                $data = [
-                    isset($row[1]) ? trim($row[1]) : null, // B - ma_don_vi_phan_phoi
-                    isset($row[2]) ? trim($row[2]) : null, // C - ten_don_vi_phan_phoi
-                    isset($row[5]) ? trim($row[5]) : null, // F - ma_nhan_vien
-                    isset($row[6]) ? trim($row[6]) : null, // G - ten_nhan_vien
-                    isset($row[7]) ? trim($row[7]) : null, // H - chuc_vu
-                    isset($row[8]) ? trim($row[8]) : null, // I - ma_tuyen_ban_hang
-                    isset($row[9]) ? trim($row[9]) : null, // J - ten_tuyen_ban_hang
-                    $this->parseDate(isset($row[10]) ? $row[10] : null), // K - ngay
-                    isset($row[11]) ? trim($row[11]) : null, // L - thu
-                    $this->parseInt(isset($row[12]) ? $row[12] : 0), // M - thu_tu_ghe_tham
-                    isset($row[13]) ? trim($row[13]) : null, // N - lo_trinh
-                    isset($row[14]) ? trim($row[14]) : null, // O - ma_khach_hang
-                    isset($row[15]) ? trim($row[15]) : null, // P - ten_khach_hang
-                    isset($row[16]) ? trim($row[16]) : null, // Q - dia_chi
-                    $this->parseInt(isset($row[17]) ? $row[17] : 0), // R - lan_ghe_tham
-                    isset($row[18]) ? trim($row[18]) : null, // S - ket_qua_ghe_tham
-                    $this->parseTime(isset($row[19]) ? $row[19] : null), // T - thoi_gian_bat_dau
-                    $this->parseTime(isset($row[20]) ? $row[20] : null), // U - thoi_gian_ket_thuc
-                    $this->parseInt(isset($row[21]) ? $row[21] : 0), // V - tong_thoi_gian_ghe_tham
-                    $this->parseCoord(isset($row[28]) ? $row[28] : 0), // AC - toa_do_ghe_tham_lat
-                    $this->parseCoord(isset($row[29]) ? $row[29] : 0), // AD - toa_do_ghe_tham_lng
-                    $this->parseCoord(isset($row[30]) ? $row[30] : 0), // AE - toa_do_ket_thuc_lat
-                    $this->parseCoord(isset($row[31]) ? $row[31] : 0), // AF - toa_do_ket_thuc_lng
-                    isset($row[34]) ? trim($row[34]) : null, // AI - tinh_thanh
-                ];
-
-                $batch[] = $data;
-                $total++;
-
-                if (count($batch) >= $batchSize) {
-                    $inserted += $this->giamsatModel->insertBatch($batch);
-                    $batch = [];
-                }
-            } catch (Exception $e) {
-                $this->logger->debug("Row parse error: " . $e->getMessage());
-                continue;
-            }
-        }
-
-        // Insert batch cuối cùng
-        if (!empty($batch)) {
-            $inserted += $this->giamsatModel->insertBatch($batch);
-        }
-
-        fclose($handle);
-        return $inserted;
-    }
-
-    /**
-     * Helper functions
-     */
-    private function parseDate($value) {
-        if (empty($value)) return null;
-        try {
-            $str = trim((string)$value);
-            $str = preg_replace('/\s.*/', '', $str);
-            
-            $date = DateTime::createFromFormat('d/m/Y', $str);
-            if ($date) return $date->format('Y-m-d');
-            
-            $date = DateTime::createFromFormat('Y-m-d', $str);
-            if ($date) return $date->format('Y-m-d');
-            
-            if (is_numeric($str)) {
-                return date('Y-m-d', ($str - 25569) * 86400);
-            }
-        } catch (Exception $e) {}
-        return null;
-    }
-
-    private function parseTime($value) {
-        if (empty($value)) return null;
-        try {
-            $str = trim((string)$value);
-            $date = DateTime::createFromFormat('H:i', $str);
-            if ($date) return $date->format('H:i:s');
-            $date = DateTime::createFromFormat('H:i:s', $str);
-            if ($date) return $date->format('H:i:s');
-        } catch (Exception $e) {}
-        return null;
-    }
-
-    private function parseInt($value) {
-        if (empty($value)) return 0;
-        return (int)preg_replace('/\D/', '', (string)$value);
-    }
-
-    private function parseCoord($value) {
-        if (empty($value)) return null;
-        $val = floatval(preg_replace('/[^\d.-]/', '', (string)$value));
-        return ($val !== 0.0) ? $val : null;
     }
 }

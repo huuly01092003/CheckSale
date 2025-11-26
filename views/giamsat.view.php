@@ -132,69 +132,211 @@
             </div>
 
             <!-- BẢNG DỮ LIỆU -->
-            <div class="table-responsive">
-                <table class="table table-hover table-sm">
-                    <thead class="table-light sticky-top">
-                        <tr>
-                            <th>Ngày</th>
-                            <th>NV (Mã)</th>
-                            <th>Tên KH</th>
-                            <th>Địa Chỉ</th>
-                            <th>Thời Gian</th>
-                            <th class="text-center">Thứ Tự</th>
-                            <th class="text-center">Lần</th>
-                            <th class="text-center">Tg (phút)</th>
-                            <th>Kết Quả</th>
-                            <th>Tỉnh</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (!empty($giamsat_data)): ?>
-                        <?php foreach ($giamsat_data as $item): 
-                            $result_badge = '';
-                            if (stripos($item['ket_qua_ghe_tham'], 'Thành công') !== false || stripos($item['ket_qua_ghe_tham'], 'Có') !== false) {
-                                $result_badge = '<span class="badge badge-success">✓ Thành công</span>';
-                            } elseif (stripos($item['ket_qua_ghe_tham'], 'Thất bại') !== false || stripos($item['ket_qua_ghe_tham'], 'Không') !== false) {
-                                $result_badge = '<span class="badge badge-danger">✗ Thất bại</span>';
-                            } else {
-                                $result_badge = '<span class="badge badge-warning">? ' . htmlspecialchars(substr($item['ket_qua_ghe_tham'], 0, 15)) . '</span>';
-                            }
-                        ?>
-                        <tr>
-                            <td><?= !empty($item['ngay']) ? date('d/m/Y', strtotime($item['ngay'])) : '-' ?></td>
-                            <td><strong><?= htmlspecialchars($item['ma_nhan_vien'] ?? '-') ?></strong></td>
-                            <td><?= htmlspecialchars(substr($item['ten_khach_hang'] ?? '', 0, 20)) ?></td>
-                            <td><small><?= htmlspecialchars(substr($item['dia_chi'] ?? '', 0, 30)) ?></small></td>
-                            <td><?= htmlspecialchars($item['thoi_gian_bat_dau'] ?? '-') ?></td>
-                            <td class="text-center"><?= $item['thu_tu_ghe_tham'] ?? '-' ?></td>
-                            <td class="text-center"><?= $item['lan_ghe_tham'] ?? '-' ?></td>
-                            <td class="text-center"><?= $item['tong_thoi_gian_ghe_tham'] ?? '-' ?></td>
-                            <td><?= $result_badge ?></td>
-                            <td><?= htmlspecialchars($item['tinh_thanh'] ?? '-') ?></td>
-                        </tr>
-                        <?php endforeach; ?>
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+    <table class="table table-hover table-sm">
+        <thead class="table-light sticky-top">
+            <tr>
+                <th>Ngày</th>
+                <th>NV (Mã)</th>
+                <th>Tên KH</th>
+                <th>Địa Chỉ</th>
+                <th class="text-center">Bắt Đầu (hh:mm:ss)</th>
+                <th class="text-center">Kết Thúc (hh:mm:ss)</th>
+                <th class="text-center">Tổng Thời Gian (phút)</th>
+                <th class="text-center">Thứ Tự</th>
+                <th class="text-center">Lần</th>
+                <th>Kết Quả</th>
+                <th>Tỉnh</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php if (!empty($giamsat_data)): ?>
+            <?php foreach ($giamsat_data as $item): 
+                // ✅ FIX: Xác định kết quả
+                $result_badge = '';
+                if (stripos($item['ket_qua_ghe_tham'], 'Thành công') !== false || 
+                    stripos($item['ket_qua_ghe_tham'], 'Có') !== false ||
+                    stripos($item['ket_qua_ghe_tham'], 'Đúng') !== false) {
+                    $result_badge = '<span class="badge badge-success">✓ Thành công</span>';
+                } elseif (stripos($item['ket_qua_ghe_tham'], 'Thất bại') !== false || 
+                          stripos($item['ket_qua_ghe_tham'], 'Không') !== false) {
+                    $result_badge = '<span class="badge badge-danger">✗ Thất bại</span>';
+                } else {
+                    $result_badge = '<span class="badge badge-warning">? ' . htmlspecialchars(substr($item['ket_qua_ghe_tham'], 0, 15)) . '</span>';
+                }
+                
+                // ✅ FIX: Parse time chính xác
+                $time_bat_dau = $item['thoi_gian_bat_dau'];
+                $time_ket_thuc = $item['thoi_gian_ket_thuc'];
+                $tong_thoi_gian = intval($item['tong_thoi_gian_ghe_tham'] ?? 0);
+            ?>
+            <tr>
+                <td><?= !empty($item['ngay']) ? date('d/m/Y', strtotime($item['ngay'])) : '-' ?></td>
+                <td><strong><?= htmlspecialchars($item['ma_nhan_vien'] ?? '-') ?></strong></td>
+                <td><?= htmlspecialchars(substr($item['ten_khach_hang'] ?? '', 0, 20)) ?></td>
+                <td><small><?= htmlspecialchars(substr($item['dia_chi'] ?? '', 0, 30)) ?></small></td>
+                
+                <!-- ✅ BẮT ĐẦU (HH:MM:SS) -->
+                <td class="text-center">
+                    <?php if ($time_bat_dau): ?>
+                        <code><?= htmlspecialchars($time_bat_dau) ?></code>
                     <?php else: ?>
-                        <tr><td colspan="10" class="text-center text-muted py-5">Không có dữ liệu</td></tr>
+                        <span class="text-muted">-</span>
                     <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                </td>
+                
+                <!-- ✅ KẾT THÚC (HH:MM:SS) -->
+                <td class="text-center">
+                    <?php if ($time_ket_thuc): ?>
+                        <code><?= htmlspecialchars($time_ket_thuc) ?></code>
+                    <?php else: ?>
+                        <span class="text-muted">-</span>
+                    <?php endif; ?>
+                </td>
+                
+                <!-- ✅ TỔNG THỜI GIAN (PHÚT - FIX FORMAT) -->
+                <td class="text-center">
+                    <?php if ($tong_thoi_gian > 0): ?>
+                        <span class="badge bg-primary"><?= $tong_thoi_gian ?> phút</span>
+                    <?php else: ?>
+                        <span class="text-muted">-</span>
+                    <?php endif; ?>
+                </td>
+                
+                <td class="text-center"><?= $item['thu_tu_ghe_tham'] ?? '-' ?></td>
+                <td class="text-center"><?= $item['lan_ghe_tham'] ?? '-' ?></td>
+                <td><?= $result_badge ?></td>
+                <td><?= htmlspecialchars($item['tinh_thanh'] ?? '-') ?></td>
+            </tr>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <tr><td colspan="11" class="text-center text-muted py-5">Không có dữ liệu</td></tr>
+        <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+<!-- 
+    ========== PHẦN 2: PAGINATION CONTROLS (thêm sau bảng) ==========
+-->
+
+<!-- ✅ PAGINATION INFO & BUTTONS -->
+<?php if (!empty($total_pages) && $total_pages > 1): ?>
+<div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+    <!-- Info -->
+    <div>
+        <small class="text-muted">
+            <i class="fas fa-book"></i>
+            Trang <strong><?= $page ?></strong> / <strong><?= $total_pages ?></strong>
+            | Tổng: <strong><?= number_format($total_records) ?></strong> records
+            | Mỗi trang: <strong>500</strong>
+        </small>
+    </div>
+    
+    <!-- Pagination Controls -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination pagination-sm mb-0">
+            <!-- PREVIOUS -->
+            <?php if ($page > 1): ?>
+                <li class="page-item">
+                    <a class="page-link" 
+                       href="?action=giamsat&tu_ngay=<?= urlencode($filters['tu_ngay']) ?>&den_ngay=<?= urlencode($filters['den_ngay']) ?>&ma_nhan_vien=<?= urlencode($filters['ma_nhan_vien']) ?>&ket_qua=<?= urlencode($filters['ket_qua']) ?>&tinh_thanh=<?= urlencode($filters['tinh_thanh']) ?>&page=<?= $page - 1 ?>"
+                       title="Trang trước">
+                        ← Trước
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="page-item disabled">
+                    <span class="page-link">← Trước</span>
+                </li>
+            <?php endif; ?>
+            
+            <!-- PAGE NUMBERS -->
+            <?php 
+                // Hiển thị pages xung quanh page hiện tại
+                $start = max(1, $page - 2);
+                $end = min($total_pages, $page + 2);
+                
+                // Nếu gần đầu, hiển thị nhiều page ở cuối
+                if ($start == 1 && $end - $start < 4) {
+                    $end = min($total_pages, $start + 4);
+                }
+                
+                // Nếu gần cuối, hiển thị nhiều page ở đầu
+                if ($end == $total_pages && $end - $start < 4) {
+                    $start = max(1, $end - 4);
+                }
+                
+                // Hiển thị dấu "..." ở đầu
+                if ($start > 1):
+            ?>
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            <?php endif; ?>
+            
+            <!-- Các numbers -->
+            <?php for ($i = $start; $i <= $end; $i++): ?>
+                <li class="page-item <?= ($i == $page) ? 'active' : '' ?>">
+                    <a class="page-link" 
+                       href="?action=giamsat&tu_ngay=<?= urlencode($filters['tu_ngay']) ?>&den_ngay=<?= urlencode($filters['den_ngay']) ?>&ma_nhan_vien=<?= urlencode($filters['ma_nhan_vien']) ?>&ket_qua=<?= urlencode($filters['ket_qua']) ?>&tinh_thanh=<?= urlencode($filters['tinh_thanh']) ?>&page=<?= $i ?>">
+                        <?= $i ?>
+                    </a>
+                </li>
+            <?php endfor; ?>
+            
+            <!-- Hiển thị dấu "..." ở cuối -->
+            <?php if ($end < $total_pages): ?>
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            <?php endif; ?>
+            
+            <!-- NEXT -->
+            <?php if ($page < $total_pages): ?>
+                <li class="page-item">
+                    <a class="page-link" 
+                       href="?action=giamsat&tu_ngay=<?= urlencode($filters['tu_ngay']) ?>&den_ngay=<?= urlencode($filters['den_ngay']) ?>&ma_nhan_vien=<?= urlencode($filters['ma_nhan_vien']) ?>&ket_qua=<?= urlencode($filters['ket_qua']) ?>&tinh_thanh=<?= urlencode($filters['tinh_thanh']) ?>&page=<?= $page + 1 ?>"
+                       title="Trang sau">
+                        Sau →
+                    </a>
+                </li>
+            <?php else: ?>
+                <li class="page-item disabled">
+                    <span class="page-link">Sau →</span>
+                </li>
+            <?php endif; ?>
+        </ul>
+    </nav>
+</div>
+
+<!-- LOAD MORE BUTTON (Alternative) -->
+<?php if ($page < $total_pages): ?>
+<div class="text-center mt-3">
+    <a href="?action=giamsat&tu_ngay=<?= urlencode($filters['tu_ngay']) ?>&den_ngay=<?= urlencode($filters['den_ngay']) ?>&ma_nhan_vien=<?= urlencode($filters['ma_nhan_vien']) ?>&ket_qua=<?= urlencode($filters['ket_qua']) ?>&tinh_thanh=<?= urlencode($filters['tinh_thanh']) ?>&page=<?= $page + 1 ?>" 
+       class="btn btn-outline-primary">
+        📥 Load More Records (<?= number_format(($page) * 500) ?> / <?= number_format($total_records) ?>)
+    </a>
+</div>
+<?php endif; ?>
+
+<?php endif; ?>
+
 
             <!-- NÚT HÀNH ĐỘNG -->
-            <div class="btn-group-custom">
-                <a href="index.php?action=giamsat_upload" class="btn btn-success">
-                    <i class="fas fa-upload"></i> Import CSV
-                </a>
-                <a href="index.php?action=giamsat" class="btn btn-secondary">
-                    <i class="fas fa-sync"></i> Làm Mới
-                </a>
-                <button class="btn btn-info" onclick="exportTableToCSV('giamsat_<?= date('Y-m-d') ?>.csv')">
-                    <i class="fas fa-download"></i> Xuất Excel
-                </button>
-                <a href="index.php?action=report" class="btn btn-primary">
-                    <i class="fas fa-chart-bar"></i> Báo Cáo Doanh Số
-                </a>
-            </div>
+           <div class="btn-group-custom">
+    <a href="index.php?action=giamsat_upload" class="btn btn-success">
+        <i class="fas fa-upload"></i> Import CSV
+    </a>
+    <a href="index.php?action=giamsat" class="btn btn-secondary">
+        <i class="fas fa-sync"></i> Làm Mới
+    </a>
+    <button class="btn btn-info" onclick="exportTableToCSV('giamsat_<?= date('Y-m-d') ?>.csv')">
+        <i class="fas fa-download"></i> Xuất Excel
+    </button>
+    <a href="index.php?action=report" class="btn btn-primary">
+        <i class="fas fa-chart-bar"></i> Báo Cáo Doanh Số
+    </a>
+</div>
         </div>
     </div>
 </div>
