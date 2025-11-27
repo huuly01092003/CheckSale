@@ -21,7 +21,19 @@
         .daily-table tbody tr:hover { background: rgba(102, 126, 234, 0.05); }
         .time-cell { text-align: center; padding: 8px 4px; }
         .time-value { background: #fff; padding: 4px 8px; border-radius: 4px; font-family: monospace; }
+        .time-suspect { background: #fff3cd; border: 1px solid #ffc107; }
         .tab-content { background: white; border: 1px solid #ddd; border-top: none; padding: 20px; }
+        .kpi-table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            font-weight: 700;
+            border: none;
+            padding: 15px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
     </style>
 </head>
 <body style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px;">
@@ -90,6 +102,31 @@
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold"><i class="fas fa-clock"></i> Giờ Bắt Đầu</label>
+                        <input type="time" name="gio_bat_dau" class="form-control" 
+                               value="<?= htmlspecialchars($filters['gio_bat_dau']) ?>">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold"><i class="fas fa-clock"></i> Giờ Kết Thúc</label>
+                        <input type="time" name="gio_ket_thuc" class="form-control" 
+                               value="<?= htmlspecialchars($filters['gio_ket_thuc']) ?>">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold"><i class="fas fa-hourglass-start"></i> Min Phút Nghi Vấn</label>
+                        <input type="number" name="min_phut_nghi_van" class="form-control" min="0"
+                               value="<?= htmlspecialchars($filters['min_phut_nghi_van']) ?>">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold"><i class="fas fa-hourglass-end"></i> Max Phút Nghi Vấn</label>
+                        <input type="number" name="max_phut_nghi_van" class="form-control" min="0"
+                               value="<?= htmlspecialchars($filters['max_phut_nghi_van']) ?>">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold"><i class="fas fa-clock"></i> Giờ Nghi Vấn (Bảng 2)</label>
+                        <input type="time" name="gio_nghi_van" class="form-control" 
+                               value="<?= htmlspecialchars($filters['gio_nghi_van']) ?>">
+                    </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-filter"></i> Lọc
@@ -98,7 +135,7 @@
                 </div>
             </form>
 
-            <!-- THỐNG KÊ (FIX: Scale theo filter) -->
+            <!-- THỐNG KÊ -->
             <div class="stats-group">
                 <div class="stat-box">
                     <span class="stat-label">Tổng Lần Ghé</span>
@@ -124,13 +161,9 @@
                     <span class="stat-label">Nhân Viên</span>
                     <strong><?= number_format($statistics['total_employees']) ?></strong>
                 </div>
-                <div class="stat-box">
-                    <span class="stat-label">Khách Hàng</span>
-                    <strong><?= number_format($statistics['total_customers']) ?></strong>
-                </div>
             </div>
 
-            <!-- BIỂU ĐỒ (FIX: Scale theo filter) -->
+            <!-- BIỂU ĐỒ -->
             <div class="row mt-4 mb-4">
                 <div class="col-md-6">
                     <div class="card">
@@ -144,7 +177,7 @@
                 </div>
                 <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header"><strong>📈 Kết Quả Ghé Thăm (FIX: Scale)</strong></div>
+                        <div class="card-header"><strong>📈 Kết Quả Ghé Thăm</strong></div>
                         <div class="card-body">
                             <div class="chart-container" style="height: 300px;">
                                 <canvas id="resultsChart"></canvas>
@@ -158,67 +191,64 @@
             <ul class="nav nav-tabs" role="tablist">
                 <li class="nav-item">
                     <a class="nav-link active" data-bs-toggle="tab" href="#tab-main">
-                        <i class="fas fa-table"></i> Bảng Giám Sát Chính
+                        <i class="fas fa-table"></i> Bảng Tổng Hợp Theo Nhân Viên
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" data-bs-toggle="tab" href="#tab-daily">
-                        <i class="fas fa-calendar-alt"></i> Tìm Kiếm Thời Gian (Nhân Viên)
+                        <i class="fas fa-calendar-alt"></i> Tìm Kiếm Hành Vi (Theo Giờ)
                     </a>
                 </li>
             </ul>
 
             <div class="tab-content">
-                <!-- TAB 1: BẢNG CHÍNH -->
+                <!-- TAB 1: BẢNG TỔNG HỢP -->
                 <div id="tab-main" class="tab-pane fade show active">
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Bảng Tổng Hợp:</strong> Hiển thị tổng số call, số call nghi vấn trong khoảng 
+                        <strong><?= $filters['min_phut_nghi_van'] ?>-<?= $filters['max_phut_nghi_van'] ?> phút</strong>, 
+                        giờ tra cứu <strong><?= $filters['gio_bat_dau'] ?>-<?= $filters['gio_ket_thuc'] ?></strong>
+                    </div>
+                    
                     <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-                        <table class="table table-hover table-sm">
+                        <table class="table table-hover table-sm kpi-table">
                             <thead class="table-light sticky-top">
                                 <tr>
-                                    <th>Ngày</th>
-                                    <th>NV (Mã)</th>
-                                    <th>Tên KH</th>
-                                    <th>Địa Chỉ</th>
-                                    <th class="text-center">Bắt Đầu</th>
-                                    <th class="text-center">Kết Thúc</th>
-                                    <th class="text-center">Tổng TG (phút)</th>
-                                    <th class="text-center">Lần</th>
-                                    <th>Kết Quả</th>
+                                    <th>Mã NV</th>
+                                    <th>Tên NV</th>
                                     <th>Tỉnh</th>
+                                    <th>Mã Tuyến</th>
+                                    <th>Tên Tuyến</th>
+                                    <th class="text-center">Số Call Nghi Vấn</th>
+                                    <th class="text-center">Tổng Call</th>
+                                    <th class="text-center">Tỉ Lệ (%)</th>
+                                    <th class="text-center">TB Call/Ngày</th>
+                                    <th class="text-center">TB Call/Tuyến/Ngày</th>
                                 </tr>
                             </thead>
                             <tbody>
-                            <?php if (!empty($giamsat_data)): ?>
-                                <?php foreach ($giamsat_data as $item): 
-                                    $result_badge = '';
-                                    if (stripos($item['ket_qua_ghe_tham'], 'Thành công') !== false || 
-                                        stripos($item['ket_qua_ghe_tham'], 'Có') !== false) {
-                                        $result_badge = '<span class="badge bg-success">✓</span>';
-                                    } elseif (stripos($item['ket_qua_ghe_tham'], 'Thất bại') !== false) {
-                                        $result_badge = '<span class="badge bg-danger">✗</span>';
-                                    } else {
-                                        $result_badge = '<span class="badge bg-warning text-dark">?</span>';
-                                    }
-                                    
-                                    $tong_thoi_gian = intval($item['tong_thoi_gian_ghe_tham'] ?? 0);
-                                ?>
+                            <?php if (!empty($giamsat_summary)): ?>
+                                <?php foreach ($giamsat_summary as $item): ?>
                                 <tr>
-                                    <td><?= !empty($item['ngay']) ? date('d/m/Y', strtotime($item['ngay'])) : '-' ?></td>
-                                    <td><strong><?= htmlspecialchars($item['ma_nhan_vien'] ?? '-') ?></strong></td>
-                                    <td><?= htmlspecialchars(substr($item['ten_khach_hang'] ?? '', 0, 20)) ?></td>
-                                    <td><small><?= htmlspecialchars(substr($item['dia_chi'] ?? '', 0, 30)) ?></small></td>
-                                    <td class="text-center"><code><?= htmlspecialchars($item['thoi_gian_bat_dau'] ?? '-') ?></code></td>
-                                    <td class="text-center"><code><?= htmlspecialchars($item['thoi_gian_ket_thuc'] ?? '-') ?></code></td>
-                                    <td class="text-center">
-                                        <?php if ($tong_thoi_gian > 0): ?>
-                                            <span class="badge bg-primary"><?= $tong_thoi_gian ?></span>
-                                        <?php else: ?>
-                                            <span class="text-muted">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="text-center"><?= $item['lan_ghe_tham'] ?? '-' ?></td>
-                                    <td><?= $result_badge ?> <?= htmlspecialchars(substr($item['ket_qua_ghe_tham'] ?? '', 0, 15)) ?></td>
+                                    <td><strong><?= htmlspecialchars($item['ma_nhan_vien']) ?></strong></td>
+                                    <td><?= htmlspecialchars($item['ten_nhan_vien']) ?></td>
                                     <td><?= htmlspecialchars($item['tinh_thanh'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($item['ma_tuyen_ban_hang'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($item['ten_tuyen_ban_hang'] ?? '-') ?></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger"><?= number_format($item['suspect_calls']) ?></span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary"><?= number_format($item['total_calls']) ?></span>
+                                    </td>
+                                    <td class="text-center">
+                                        <strong class="<?= ($item['suspect_ratio'] > 50) ? 'text-danger' : 'text-success' ?>">
+                                            <?= number_format($item['suspect_ratio'], 2) ?>%
+                                        </strong>
+                                    </td>
+                                    <td class="text-center"><?= number_format($item['avg_calls_per_day'], 2) ?></td>
+                                    <td class="text-center"><?= number_format($item['avg_calls_per_route_per_day'], 2) ?></td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
@@ -227,52 +257,22 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <!-- PAGINATION -->
-                    <?php if (!empty($total_pages) && $total_pages > 1): ?>
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <small class="text-muted">
-                            Trang <strong><?= $page ?></strong> / <strong><?= $total_pages ?></strong> 
-                            | Tổng: <strong><?= number_format($total_records) ?></strong>
-                        </small>
-                        
-                        <nav>
-                            <ul class="pagination pagination-sm mb-0">
-                                <?php if ($page > 1): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?action=giamsat&tu_ngay=<?= urlencode($filters['tu_ngay']) ?>&den_ngay=<?= urlencode($filters['den_ngay']) ?>&ma_nhan_vien=<?= urlencode($filters['ma_nhan_vien']) ?>&ket_qua=<?= urlencode($filters['ket_qua']) ?>&tinh_thanh=<?= urlencode($filters['tinh_thanh']) ?>&page=<?= $page - 1 ?>">← Trước</a>
-                                    </li>
-                                <?php endif; ?>
-                                
-                                <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
-                                    <li class="page-item <?= ($i == $page) ? 'active' : '' ?>">
-                                        <a class="page-link" href="?action=giamsat&tu_ngay=<?= urlencode($filters['tu_ngay']) ?>&den_ngay=<?= urlencode($filters['den_ngay']) ?>&ma_nhan_vien=<?= urlencode($filters['ma_nhan_vien']) ?>&ket_qua=<?= urlencode($filters['ket_qua']) ?>&tinh_thanh=<?= urlencode($filters['tinh_thanh']) ?>&page=<?= $i ?>"><?= $i ?></a>
-                                    </li>
-                                <?php endfor; ?>
-                                
-                                <?php if ($page < $total_pages): ?>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?action=giamsat&tu_ngay=<?= urlencode($filters['tu_ngay']) ?>&den_ngay=<?= urlencode($filters['den_ngay']) ?>&ma_nhan_vien=<?= urlencode($filters['ma_nhan_vien']) ?>&ket_qua=<?= urlencode($filters['ket_qua']) ?>&tinh_thanh=<?= urlencode($filters['tinh_thanh']) ?>&page=<?= $page + 1 ?>">Sau →</a>
-                                    </li>
-                                <?php endif; ?>
-                            </ul>
-                        </nav>
-                    </div>
-                    <?php endif; ?>
                 </div>
 
-                <!-- TAB 2: BẢNG TÌM KIẾM THỜI GIAN (ẢNH 2) -->
+                <!-- TAB 2: BẢNG TÌM KIẾM HÀNH VI -->
                 <div id="tab-daily" class="tab-pane fade">
                     <?php if (!empty($filters['ma_nhan_vien']) && !empty($employee_daily_data)): ?>
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i> 
-                            Tìm kiếm thời gian kết thúc của <strong><?= htmlspecialchars($filters['ma_nhan_vien']) ?></strong> 
-                            từ <strong><?= $filters['tu_ngay'] ?></strong> đến <strong><?= $filters['den_ngay'] ?></strong>
+                            Tìm kiếm hành vi của <strong><?= htmlspecialchars($filters['ma_nhan_vien']) ?></strong> 
+                            từ <strong><?= $filters['tu_ngay'] ?></strong> đến <strong><?= $filters['den_ngay'] ?></strong>.
+                            Giờ nghi vấn: <strong><?= $filters['gio_nghi_van'] ?></strong>
                         </div>
 
-                        <!-- Nhóm theo Nhân Viên -->
                         <?php 
+                            // Nhóm theo Nhân Viên
                             $grouped_by_emp = [];
+                            $total_suspect = 0;
                             foreach ($employee_daily_data as $row) {
                                 $key = $row['ma_nhan_vien'];
                                 if (!isset($grouped_by_emp[$key])) {
@@ -286,8 +286,16 @@
                                     $grouped_by_emp[$key]['days'][$day] = [];
                                 }
                                 $grouped_by_emp[$key]['days'][$day][] = $row;
+                                
+                                if (isset($row['is_suspect']) && $row['is_suspect'] == 1) {
+                                    $total_suspect++;
+                                }
                             }
                         ?>
+
+                        <div class="alert alert-warning">
+                            <strong>⚠️ Tổng Nghi Vấn:</strong> <?= $total_suspect ?> call kết thúc sau <?= $filters['gio_nghi_van'] ?>
+                        </div>
 
                         <?php foreach ($grouped_by_emp as $ma_nv => $emp_data): ?>
                         <div class="card mb-3">
@@ -296,50 +304,51 @@
                                     <?= htmlspecialchars($emp_data['info']['ten_nhan_vien'] ?? $ma_nv) ?> 
                                     (<?= htmlspecialchars($ma_nv) ?>)
                                 </strong> - 
-                                GS: <?= htmlspecialchars($emp_data['info']['gs'] ?? '') ?> | 
-                                Tỉnh: <?= htmlspecialchars($emp_data['info']['tinh_thanh'] ?? '') ?>
+                                Tỉnh: <?= htmlspecialchars($emp_data['info']['tinh_thanh'] ?? '') ?> | 
+                                Tuyến: <?= htmlspecialchars($emp_data['info']['tuyen'] ?? '') ?>
                             </div>
                             <div class="card-body" style="padding: 0;">
                                 <div class="table-responsive">
                                     <table class="table table-sm daily-table mb-0">
                                         <thead class="table-light">
                                             <tr>
-                                                <th>GS</th>
                                                 <th>Tỉnh</th>
                                                 <th>Mã NV</th>
                                                 <th>Tên NV</th>
-                                                <th class="text-center">Tổng Lần Ghé</th>
+                                                <th>Tuyến</th>
+                                                <th class="text-center">Tổng Call</th>
                                                 <?php 
-                                                    $all_dates = [];
-                                                    foreach ($emp_data['days'] as $day => $calls) {
-                                                        $all_dates[] = $day;
-                                                    }
+                                                    $all_dates = array_keys($emp_data['days']);
                                                     sort($all_dates);
                                                     foreach ($all_dates as $date): 
                                                         $day_obj = new DateTime($date);
-                                                        $day_name = ['Chủ', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][intval($day_obj->format('w'))];
+                                                        $day_name = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][intval($day_obj->format('w'))];
                                                 ?>
                                                     <th class="text-center time-cell">
                                                         <small><?= $day_name ?></small><br>
-                                                        <small><?= date('d-M', strtotime($date)) ?></small>
+                                                        <small><?= date('d/m', strtotime($date)) ?></small>
                                                     </th>
                                                 <?php endforeach; ?>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr>
-                                                <td><?= htmlspecialchars($emp_data['info']['gs'] ?? '') ?></td>
                                                 <td><?= htmlspecialchars($emp_data['info']['tinh_thanh'] ?? '') ?></td>
                                                 <td><?= htmlspecialchars($ma_nv) ?></td>
                                                 <td><?= htmlspecialchars($emp_data['info']['ten_nhan_vien'] ?? '') ?></td>
+                                                <td><?= htmlspecialchars($emp_data['info']['tuyen'] ?? '') ?></td>
                                                 <td class="text-center"><strong><?= count($employee_daily_data) ?></strong></td>
                                                 <?php foreach ($all_dates as $date): ?>
                                                     <td class="time-cell">
                                                         <?php if (isset($emp_data['days'][$date])): ?>
-                                                            <?php $times = array_map(function($c) { return $c['thoi_gian_ket_thuc']; }, $emp_data['days'][$date]); ?>
                                                             <div style="display: flex; flex-direction: column; gap: 2px;">
-                                                                <?php foreach ($times as $t): ?>
-                                                                    <div class="time-value"><?= htmlspecialchars($t) ?></div>
+                                                                <?php foreach ($emp_data['days'][$date] as $call): ?>
+                                                                    <div class="time-value <?= (isset($call['is_suspect']) && $call['is_suspect'] == 1) ? 'time-suspect' : '' ?>">
+                                                                        <?= htmlspecialchars($call['thoi_gian_ket_thuc']) ?>
+                                                                        <?php if (isset($call['is_suspect']) && $call['is_suspect'] == 1): ?>
+                                                                            <span class="badge bg-warning text-dark" style="font-size: 9px;">⚠️</span>
+                                                                        <?php endif; ?>
+                                                                    </div>
                                                                 <?php endforeach; ?>
                                                             </div>
                                                         <?php endif; ?>
@@ -356,7 +365,7 @@
                     <?php else: ?>
                         <div class="alert alert-warning" style="margin: 20px 0;">
                             <i class="fas fa-exclamation-triangle"></i> 
-                            Chọn mã nhân viên từ bảng chính để xem chi tiết thời gian kết thúc theo ngày.
+                            Chọn mã nhân viên từ bảng chính để xem chi tiết hành vi theo giờ.
                         </div>
                     <?php endif; ?>
                 </div>
@@ -416,7 +425,7 @@ if (chartData && chartData.length > 0) {
     }
 }
 
-// Biểu đồ kết quả (FIX: Scale)
+// Biểu đồ kết quả
 if (resultStats && Object.keys(resultStats).length > 0) {
     const resultsCtx = document.getElementById('resultsChart');
     if (resultsCtx) {

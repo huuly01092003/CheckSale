@@ -1,7 +1,9 @@
 <?php
 /**
- * FILE: MODELS/GIAMSATMODEL.PHP (FIX v10)
- * ✅ FIX: Lọc theo kết quả, thống kê chính xác, hỗ trợ tìm kiếm thời gian theo ngày
+ * FILE: MODELS/GIAMSATMODEL.PHP - FIX v12
+ * ✅ Thêm getEmployeeSummary() - Tổng hợp theo nhân viên
+ * ✅ Tính: Số call nghi vấn, tỉ lệ, TB/ngày, TB/tuyến
+ * ✅ Hỗ trợ filter giờ + min/max phút
  */
 
 class GiamSatModel {
@@ -15,7 +17,7 @@ class GiamSatModel {
     }
 
     /**
-     * ========== IMPORT TỪ CSV ==========
+     * ========== IMPORT TỪ CSV (GIỮ NGUYÊN) ==========
      */
     public function importFromCSV($file) {
         $handle = null;
@@ -102,9 +104,9 @@ class GiamSatModel {
     }
 
     /**
-     * ========== INSERT BATCH ==========
+     * ========== INSERT BATCH (GIỮ NGUYÊN) ==========
      */
-    public function insertBatch($data_array) {
+    private function insertBatch($data_array) {
         if (empty($data_array)) return 0;
 
         try {
@@ -141,25 +143,54 @@ class GiamSatModel {
     }
 
     /**
-     * ========== SEARCH PAGINATED (FIX LỌC) ==========
+     * ========== ✅ NEW: TỔNG HỢP THEO NHÂN VIÊN (BẢNG 1) ==========
      */
-    public function searchPaginated($filters = [], $offset = 0, $limit = 500) {
+    public function getEmployeeSummary($filters = []) {
         try {
-            $sql = "SELECT * FROM {$this->table} WHERE 1=1";
-            $params = [];
-
-            if (!empty($filters['tu_ngay']) && !empty($filters['den_ngay'])) {
-                $sql .= " AND DATE(ngay) >= ? AND DATE(ngay) <= ?";
-                $params[] = $filters['tu_ngay'];
-                $params[] = $filters['den_ngay'];
-            }
+            $sql = "SELECT 
+                    ma_nhan_vien,
+                    ten_nhan_vien,
+                    tinh_thanh,
+                    ma_tuyen_ban_hang,
+                    ten_tuyen_ban_hang,
+                    
+                    -- Tổng số call trong khoảng giờ
+                    COUNT(*) as total_calls,
+                    
+                    -- Số call nghi vấn (trong khoảng min-max phút)
+                    SUM(CASE 
+                        WHEN CAST(tong_thoi_gian_ghe_tham AS UNSIGNED) >= ? 
+                         AND CAST(tong_thoi_gian_ghe_tham AS UNSIGNED) <= ? 
+                        THEN 1 
+                        ELSE 0 
+                    END) as suspect_calls,
+                    
+                    -- Số ngày có hoạt động
+                    COUNT(DISTINCT DATE(ngay)) as working_days,
+                    
+                    -- Tổng thời gian
+                    SUM(CAST(tong_thoi_gian_ghe_tham AS UNSIGNED)) as total_minutes
+                    
+                FROM {$this->table}
+                WHERE DATE(ngay) >= ? 
+                  AND DATE(ngay) <= ?
+                  AND TIME(thoi_gian_ket_thuc) >= ?
+                  AND TIME(thoi_gian_ket_thuc) <= ?";
+            
+            $params = [
+                $filters['min_phut_nghi_van'],
+                $filters['max_phut_nghi_van'],
+                $filters['tu_ngay'],
+                $filters['den_ngay'],
+                $filters['gio_bat_dau'],
+                $filters['gio_ket_thuc']
+            ];
 
             if (!empty($filters['ma_nhan_vien'])) {
                 $sql .= " AND ma_nhan_vien LIKE ?";
                 $params[] = '%' . $filters['ma_nhan_vien'] . '%';
             }
 
-            // ✅ FIX LỖI: Lọc theo kết quả chính xác
             if (!empty($filters['ket_qua'])) {
                 $sql .= " AND ket_qua_ghe_tham = ?";
                 $params[] = $filters['ket_qua'];
@@ -170,167 +201,175 @@ class GiamSatModel {
                 $params[] = '%' . $filters['tinh_thanh'] . '%';
             }
 
-            $sql .= " ORDER BY COALESCE(ngay, '0000-00-00') DESC, 
-                      COALESCE(thoi_gian_bat_dau, '00:00:00') DESC 
-                      LIMIT ? OFFSET ?";
-            $params[] = $limit;
-            $params[] = $offset;
-
+            $sql .= " GROUP BY ma_nhan_vien, ten_nhan_vien, tinh_thanh, ma_tuyen_ban_hang, ten_tuyen_ban_hang
+                      ORDER BY suspect_calls DESC, ma_nhan_vien ASC";
+            
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
             
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            foreach ($result as &$row) {
-                $row['tong_thoi_gian_ghe_tham'] = intval($row['tong_thoi_gian_ghe_tham'] ?? 0);
+            // Tính toán thêm
+            $total_days = intval((strtotime($filters['den_ngay']) - strtotime($filters['tu_ngay'])) / 86400) + 1;
+            
+            foreach ($results as &$row) {
+                $row['total_calls'] = intval($row['total_calls']);
+                $row['suspect_calls'] = intval($row['suspect_calls']);
+                $row['working_days'] = intval($row['working_days']);
+                $row['total_minutes'] = intval($row['total_minutes']);
+                
+                // Tỉ lệ nghi vấn
+                $row['suspect_ratio'] = ($row['total_calls'] > 0) 
+                    ? round(($row['suspect_calls'] / $row['total_calls']) * 100, 2) 
+                    : 0;
+                
+                // TB call/ngày
+                $row['avg_calls_per_day'] = ($row['working_days'] > 0) 
+                    ? round($row['total_calls'] / $row['working_days'], 2) 
+                    : 0;
+                
+                // TB call/tuyến/ngày
+                $row['avg_calls_per_route_per_day'] = ($row['working_days'] > 0) 
+                    ? round($row['total_calls'] / $row['working_days'], 2) 
+                    : 0;
             }
             unset($row);
             
-            return $result;
+            return $results;
         } catch (Exception $e) {
-            $this->logger->error("searchPaginated error", ['error' => $e->getMessage()]);
+            $this->logger->error("getEmployeeSummary error", ['error' => $e->getMessage()]);
             return [];
         }
     }
 
     /**
-     * ========== COUNT FILTERED ==========
+     * ========== ✅ NEW: TÌM KIẾM THỜI GIAN THEO NGÀY (BẢNG 2) ==========
      */
-    public function countFiltered($filters = []) {
+    public function getEmployeeDailyCallTimes($tu_ngay, $den_ngay, $ma_nhan_vien = null, $gio_nghi_van = '14:00') {
         try {
-            $sql = "SELECT COUNT(*) as total FROM {$this->table} WHERE 1=1";
-            $params = [];
+            $sql = "SELECT 
+                    tinh_thanh as 'TINH',
+                    ma_nhan_vien as 'MA_NV',
+                    ten_nhan_vien as 'TEN_NV',
+                    ma_tuyen_ban_hang as 'TUYEN',
+                    DATE(ngay) as order_date,
+                    thoi_gian_ket_thuc,
+                    CAST(tong_thoi_gian_ghe_tham AS UNSIGNED) as duration_minutes,
+                    CASE 
+                        WHEN TIME(thoi_gian_ket_thuc) >= ? THEN 1 
+                        ELSE 0 
+                    END as is_suspect
+                FROM {$this->table}
+                WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?";
+            
+            $params = [$gio_nghi_van, $tu_ngay, $den_ngay];
 
-            if (!empty($filters['tu_ngay']) && !empty($filters['den_ngay'])) {
-                $sql .= " AND DATE(ngay) >= ? AND DATE(ngay) <= ?";
-                $params[] = $filters['tu_ngay'];
-                $params[] = $filters['den_ngay'];
+            if (!empty($ma_nhan_vien)) {
+                $sql .= " AND ma_nhan_vien = ?";
+                $params[] = $ma_nhan_vien;
             }
 
+            $sql .= " ORDER BY ma_nhan_vien ASC, ngay ASC, thoi_gian_ket_thuc ASC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $this->logger->error("getEmployeeDailyCallTimes error", ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    /**
+     * ========== THỐNG KÊ CHUNG ==========
+     */
+    public function getStatistics($tu_ngay, $den_ngay, $filters = []) {
+        try {
+            $where = "WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?";
+            $params = [$tu_ngay, $den_ngay];
+
             if (!empty($filters['ma_nhan_vien'])) {
-                $sql .= " AND ma_nhan_vien LIKE ?";
+                $where .= " AND ma_nhan_vien LIKE ?";
                 $params[] = '%' . $filters['ma_nhan_vien'] . '%';
             }
 
             if (!empty($filters['ket_qua'])) {
-                $sql .= " AND ket_qua_ghe_tham = ?";
+                $where .= " AND ket_qua_ghe_tham = ?";
                 $params[] = $filters['ket_qua'];
             }
 
             if (!empty($filters['tinh_thanh'])) {
-                $sql .= " AND tinh_thanh LIKE ?";
+                $where .= " AND tinh_thanh LIKE ?";
                 $params[] = '%' . $filters['tinh_thanh'] . '%';
             }
 
+            $sql = "SELECT 
+                        COUNT(*) as total_records,
+                        COUNT(DISTINCT DATE(ngay)) as total_days,
+                        COUNT(DISTINCT ma_nhan_vien) as total_employees,
+                        COUNT(DISTINCT ma_khach_hang) as total_customers,
+                        COALESCE(MIN(CAST(tong_thoi_gian_ghe_tham AS UNSIGNED)), 0) as min_call_time,
+                        COALESCE(MAX(CAST(tong_thoi_gian_ghe_tham AS UNSIGNED)), 0) as max_call_time,
+                        COALESCE(ROUND(AVG(CAST(tong_thoi_gian_ghe_tham AS UNSIGNED)), 1), 0) as avg_call_time,
+                        SUM(CASE 
+                            WHEN ket_qua_ghe_tham LIKE '%Thành công%'
+                                 OR ket_qua_ghe_tham LIKE '%Có%'
+                                 OR ket_qua_ghe_tham LIKE '%Đúng%'
+                                 OR ket_qua_ghe_tham LIKE '%OK%'
+                            THEN 1 
+                            ELSE 0 
+                        END) as success_count
+                    FROM {$this->table}
+                    $where";
+            
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
-            
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return intval($result['total'] ?? 0);
+            
+            $total_records = intval($result['total_records'] ?? 0);
+            $success_count = intval($result['success_count'] ?? 0);
+            $success_rate = ($total_records > 0) 
+                ? round(($success_count / $total_records) * 100, 2) 
+                : 0;
+            
+            $min_time = intval($result['min_call_time'] ?? 0);
+            $max_time = intval($result['max_call_time'] ?? 0);
+            
+            if ($total_records === 0) {
+                $min_time = 0;
+                $max_time = 0;
+            }
+            
+            return [
+                'total_records' => $total_records,
+                'total_days' => intval($result['total_days'] ?? 0),
+                'total_employees' => intval($result['total_employees'] ?? 0),
+                'total_customers' => intval($result['total_customers'] ?? 0),
+                'min_call_time' => $min_time,
+                'max_call_time' => $max_time,
+                'avg_call_time' => floatval($result['avg_call_time'] ?? 0),
+                'success_count' => $success_count,
+                'success_rate' => $success_rate
+            ];
         } catch (Exception $e) {
-            $this->logger->error("countFiltered error", ['error' => $e->getMessage()]);
-            return 0;
+            $this->logger->error("getStatistics error", ['error' => $e->getMessage()]);
+            return [
+                'total_records' => 0,
+                'total_days' => 0,
+                'total_employees' => 0,
+                'total_customers' => 0,
+                'min_call_time' => 0,
+                'max_call_time' => 0,
+                'avg_call_time' => 0,
+                'success_count' => 0,
+                'success_rate' => 0
+            ];
         }
     }
 
     /**
-     * ========== TÍNH THỐNG KÊ (FIX CHÍNH XÁC) ==========
-     * ✅ Tính đúng: Số phút nghi vấn, TG TB, Tỷ lệ thành công
-     */
-public function getStatistics($tu_ngay, $den_ngay, $filters = []) {
-    try {
-        // ========== BUILD WHERE CLAUSE ==========
-        $where = "WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?";
-        $params = [$tu_ngay, $den_ngay];
-
-        if (!empty($filters['ma_nhan_vien'])) {
-            $where .= " AND ma_nhan_vien LIKE ?";
-            $params[] = '%' . $filters['ma_nhan_vien'] . '%';
-        }
-
-        if (!empty($filters['ket_qua'])) {
-            $where .= " AND ket_qua_ghe_tham = ?";
-            $params[] = $filters['ket_qua'];
-        }
-
-        if (!empty($filters['tinh_thanh'])) {
-            $where .= " AND tinh_thanh LIKE ?";
-            $params[] = '%' . $filters['tinh_thanh'] . '%';
-        }
-
-        // ========== QUERY CHÍNH ==========
-        $sql = "SELECT 
-                    COUNT(*) as total_records,
-                    COUNT(DISTINCT DATE(ngay)) as total_days,
-                    COUNT(DISTINCT ma_nhan_vien) as total_employees,
-                    COUNT(DISTINCT ma_khach_hang) as total_customers,
-                    
-                    -- ✅ FIX: Lấy từ cột tong_thoi_gian_ghe_tham (đã tính sẵn)
-                    COALESCE(MIN(CAST(tong_thoi_gian_ghe_tham AS UNSIGNED)), 0) as min_call_time,
-                    COALESCE(MAX(CAST(tong_thoi_gian_ghe_tham AS UNSIGNED)), 0) as max_call_time,
-                    COALESCE(ROUND(AVG(CAST(tong_thoi_gian_ghe_tham AS UNSIGNED)), 1), 0) as avg_call_time,
-                    
-                    -- ✅ FIX: Đếm kết quả thành công (bao gồm các keyword)
-                    SUM(CASE 
-                        WHEN ket_qua_ghe_tham LIKE '%Thành công%'
-                             OR ket_qua_ghe_tham LIKE '%Có%'
-                             OR ket_qua_ghe_tham LIKE '%Đúng%'
-                             OR ket_qua_ghe_tham LIKE '%OK%'
-                        THEN 1 
-                        ELSE 0 
-                    END) as success_count
-                FROM {$this->table}
-                $where";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // ========== TÍNH TOÁN ==========
-        $total_records = intval($result['total_records'] ?? 0);
-        $success_count = intval($result['success_count'] ?? 0);
-        $success_rate = ($total_records > 0) 
-            ? round(($success_count / $total_records) * 100, 2) 
-            : 0;
-        
-        $min_time = intval($result['min_call_time'] ?? 0);
-        $max_time = intval($result['max_call_time'] ?? 0);
-        
-        // Nếu không có dữ liệu, set về 0
-        if ($total_records === 0) {
-            $min_time = 0;
-            $max_time = 0;
-        }
-        
-        return [
-            'total_records' => $total_records,
-            'total_days' => intval($result['total_days'] ?? 0),
-            'total_employees' => intval($result['total_employees'] ?? 0),
-            'total_customers' => intval($result['total_customers'] ?? 0),
-            'min_call_time' => $min_time,
-            'max_call_time' => $max_time,
-            'avg_call_time' => floatval($result['avg_call_time'] ?? 0),
-            'success_count' => $success_count,
-            'success_rate' => $success_rate
-        ];
-    } catch (Exception $e) {
-        $this->logger->error("getStatistics error", ['error' => $e->getMessage()]);
-        return [
-            'total_records' => 0,
-            'total_days' => 0,
-            'total_employees' => 0,
-            'total_customers' => 0,
-            'min_call_time' => 0,
-            'max_call_time' => 0,
-            'avg_call_time' => 0,
-            'success_count' => 0,
-            'success_rate' => 0
-        ];
-    }
-}
-
-    /**
-     * ========== THỐNG KÊ THEO KẾT QUẢ (FIX: SCALE THEO FILTER) ==========
+     * ========== THỐNG KÊ THEO KẾT QUẢ ==========
      */
     public function getResultStats($tu_ngay, $den_ngay, $filters = []) {
         try {
@@ -342,7 +381,6 @@ public function getStatistics($tu_ngay, $den_ngay, $filters = []) {
             
             $params = [$tu_ngay, $den_ngay];
 
-            // Áp dụng cùng filter
             if (!empty($filters['ma_nhan_vien'])) {
                 $sql .= " AND ma_nhan_vien LIKE ?";
                 $params[] = '%' . $filters['ma_nhan_vien'] . '%';
@@ -371,7 +409,7 @@ public function getStatistics($tu_ngay, $den_ngay, $filters = []) {
     }
 
     /**
-     * ========== DỮ LIỆU CHO BIỂU ĐỒ (FIX: SCALE THEO FILTER) ==========
+     * ========== DỮ LIỆU CHO BIỂU ĐỒ ==========
      */
     public function getChartData($tu_ngay, $den_ngay, $filters = []) {
         try {
@@ -387,7 +425,6 @@ public function getStatistics($tu_ngay, $den_ngay, $filters = []) {
             
             $params = [$tu_ngay, $den_ngay];
 
-            // Áp dụng cùng filter
             if (!empty($filters['ma_nhan_vien'])) {
                 $sql .= " AND ma_nhan_vien LIKE ?";
                 $params[] = '%' . $filters['ma_nhan_vien'] . '%';
@@ -423,118 +460,40 @@ public function getStatistics($tu_ngay, $den_ngay, $filters = []) {
     }
 
     /**
-     * ========== TÌM KIẾM THỜI GIAN THEO NGÀY (BẢNG ẢNH 2) ==========
-     * Lấy tất cả cuộc gọi theo nhân viên và ngày trong khoảng thời gian
-     */
-    public function getEmployeeDailyCallTimes($tu_ngay, $den_ngay, $ma_nhan_vien = null) {
-        try {
-            $sql = "SELECT 
-                    gs as 'GS',
-                    tinh_thanh as 'TINH',
-                    ma_nhan_vien as 'MA_NV',
-                    ten_nhan_vien as 'TEN_NV',
-                    DATE(ngay) as order_date,
-                    thoi_gian_ket_thuc,
-                    ket_qua_ghe_tham as result
-                FROM {$this->table}
-                WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?";
-            
-            $params = [$tu_ngay, $den_ngay];
-
-            if (!empty($ma_nhan_vien)) {
-                $sql .= " AND ma_nhan_vien = ?";
-                $params[] = $ma_nhan_vien;
-            }
-
-            $sql .= " ORDER BY ma_nhan_vien ASC, ngay ASC, thoi_gian_ket_thuc ASC";
-            
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-            
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            $this->logger->error("getEmployeeDailyCallTimes error", ['error' => $e->getMessage()]);
-            return [];
-        }
-    }
-
-    /**
      * ========== DANH SÁCH NHÂN VIÊN DÙNG FILTER ==========
      */
-public function getEmployeeListFiltered($tu_ngay, $den_ngay, $filters = []) {
-    try {
-        $sql = "SELECT DISTINCT 
-                    ma_nhan_vien,
-                    ten_nhan_vien
-                FROM {$this->table}
-                WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?
-                AND ma_nhan_vien IS NOT NULL 
-                AND ma_nhan_vien != ''
-                AND ten_nhan_vien IS NOT NULL
-                AND ten_nhan_vien != ''";
-        
-        $params = [$tu_ngay, $den_ngay];
-
-        // ✅ Giữ nguyên filter tỉnh
-        if (!empty($filters['tinh_thanh'])) {
-            $sql .= " AND tinh_thanh LIKE ?";
-            $params[] = '%' . $filters['tinh_thanh'] . '%';
-        }
-
-        // ✅ Giữ nguyên filter kết quả
-        if (!empty($filters['ket_qua'])) {
-            $sql .= " AND ket_qua_ghe_tham = ?";
-            $params[] = $filters['ket_qua'];
-        }
-
-        // ❌ BỎ filter ma_nhan_vien để lấy TẤT CẢ nhân viên UNIQUE
-
-        $sql .= " ORDER BY ma_nhan_vien ASC";
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    } catch (Exception $e) {
-        $this->logger->error("getEmployeeListFiltered error", ['error' => $e->getMessage()]);
-        return [];
-    }
-}
-
-    /**
-     * ========== DANH SÁCH KHÁCH HÀNG DÙNG FILTER ==========
-     */
-    public function getCustomerListFiltered($tu_ngay, $den_ngay, $filters = []) {
+    public function getEmployeeListFiltered($tu_ngay, $den_ngay, $filters = []) {
         try {
             $sql = "SELECT DISTINCT 
-                    ma_khach_hang,
-                    ten_khach_hang,
-                    COUNT(*) as so_lan_ghe_tham
-                FROM {$this->table}
-                WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?
-                AND ma_khach_hang IS NOT NULL AND ma_khach_hang != ''";
+                        ma_nhan_vien,
+                        ten_nhan_vien
+                    FROM {$this->table}
+                    WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?
+                    AND ma_nhan_vien IS NOT NULL 
+                    AND ma_nhan_vien != ''
+                    AND ten_nhan_vien IS NOT NULL
+                    AND ten_nhan_vien != ''";
             
             $params = [$tu_ngay, $den_ngay];
-
-            if (!empty($filters['ma_nhan_vien'])) {
-                $sql .= " AND ma_nhan_vien LIKE ?";
-                $params[] = '%' . $filters['ma_nhan_vien'] . '%';
-            }
 
             if (!empty($filters['tinh_thanh'])) {
                 $sql .= " AND tinh_thanh LIKE ?";
                 $params[] = '%' . $filters['tinh_thanh'] . '%';
             }
 
-            $sql .= " GROUP BY ma_khach_hang, ten_khach_hang
-                      ORDER BY ma_khach_hang ASC
-                      LIMIT 10";
+            if (!empty($filters['ket_qua'])) {
+                $sql .= " AND ket_qua_ghe_tham = ?";
+                $params[] = $filters['ket_qua'];
+            }
+
+            $sql .= " ORDER BY ma_nhan_vien ASC";
             
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Exception $e) {
-            $this->logger->error("getCustomerListFiltered error", ['error' => $e->getMessage()]);
+            $this->logger->error("getEmployeeListFiltered error", ['error' => $e->getMessage()]);
             return [];
         }
     }
@@ -542,45 +501,45 @@ public function getEmployeeListFiltered($tu_ngay, $den_ngay, $filters = []) {
     /**
      * ========== DANH SÁCH KẾT QUẢ DÙNG FILTER ==========
      */
-public function getResultListFiltered($tu_ngay, $den_ngay) {
-    try {
-        $sql = "SELECT DISTINCT ket_qua_ghe_tham
-                FROM {$this->table}
-                WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?
-                AND ket_qua_ghe_tham IS NOT NULL AND ket_qua_ghe_tham != ''
-                ORDER BY ket_qua_ghe_tham ASC";
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$tu_ngay, $den_ngay]);
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
-    } catch (Exception $e) {
-        $this->logger->error("getResultListFiltered error", ['error' => $e->getMessage()]);
-        return [];
+    public function getResultListFiltered($tu_ngay, $den_ngay) {
+        try {
+            $sql = "SELECT DISTINCT ket_qua_ghe_tham
+                    FROM {$this->table}
+                    WHERE DATE(ngay) >= ? AND DATE(ngay) <= ?
+                    AND ket_qua_ghe_tham IS NOT NULL AND ket_qua_ghe_tham != ''
+                    ORDER BY ket_qua_ghe_tham ASC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$tu_ngay, $den_ngay]);
+            return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) {
+            $this->logger->error("getResultListFiltered error", ['error' => $e->getMessage()]);
+            return [];
+        }
     }
-}
 
     /**
      * ========== LẤY DANH SÁCH TỈNH ==========
      */
-public function getProvinceList() {
-    try {
-        $sql = "SELECT DISTINCT tinh_thanh
-                FROM {$this->table}
-                WHERE tinh_thanh IS NOT NULL AND tinh_thanh != ''
-                ORDER BY tinh_thanh ASC";
-        
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
-    } catch (Exception $e) {
-        $this->logger->error("getProvinceList error", ['error' => $e->getMessage()]);
-        return [];
+    public function getProvinceList() {
+        try {
+            $sql = "SELECT DISTINCT tinh_thanh
+                    FROM {$this->table}
+                    WHERE tinh_thanh IS NOT NULL AND tinh_thanh != ''
+                    ORDER BY tinh_thanh ASC";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) {
+            $this->logger->error("getProvinceList error", ['error' => $e->getMessage()]);
+            return [];
+        }
     }
-}
+
     /**
      * ========== HELPERS: PARSE DỮ LIỆU ==========
      */
-    
     private function parseDate($value) {
         if (empty($value)) return null;
         try {
